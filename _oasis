@@ -1,0 +1,47 @@
+OASISFormat: 0.2
+OCamlVersion: >= 3.12.0
+Name: ocamlfuse
+Version: 2.7.1
+Synopsis: OCaml bindings for FUSE (Filesystem in UserSpacE) 
+Authors: Vincenzo Ciancia
+License: GPL
+LicenseFile: LICENSE
+Homepage: http://sourceforge.net/apps/mediawiki/ocamlfuse/index.php?title=Main_Page
+BuildTools: ocamlbuild
+Plugins: META (0.2)
+
+# Library
+Library Fuse
+  Path: lib
+  Modules:
+    Fuse,
+    Fuse_bindings,
+    Unix_util
+  InternalModules:
+    Result,
+    Fuse_lib
+  BuildDepends: unix, threads, bigarray
+  CSources:
+    Unix_util_stubs.c,
+    Fuse_bindings.h,
+    Fuse_bindings_stubs.c,
+    Fuse_util.c
+  CCLib: -lfuse -L/usr/lib/ocaml -lcamlidl
+  CCOpt: -D_FILE_OFFSET_BITS=64 -pthread
+  ByteOpt: -linkall
+  NativeOpt: -linkall
+  XMETADescription: OCaml bindings for FUSE
+
+# Examples
+Executable hello
+  Path: example
+  MainIs: hello.ml
+  Install: false
+  BuildDepends: Fuse
+
+Executable fusexmp
+  Path: example
+  MainIs: fusexmp.ml
+  Install: false
+  BuildDepends: Fuse
+
