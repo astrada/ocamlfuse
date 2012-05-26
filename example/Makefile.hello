@@ -1,0 +1,16 @@
+OCAMLMAKEFILE=../OCamlMakefile
+
+SOURCES=hello.ml
+RESULT=hello
+CLIBS=fuse camlidl
+LIBS=bigarray Fuse
+THREADS=threads
+TRASH=*~ \\\#*
+CFLAGS=-D_FILE_OFFSET_BITS=64 -I. -pthread
+
+LIBDIRS=$(OCAMLLIBPATH)/site-packages/ocamlfuse
+INCDIRS=$(LIBDIRS)
+
+target: native-code
+
+-include $(OCAMLMAKEFILE)
