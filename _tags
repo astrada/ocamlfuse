@@ -1,5 +1,5 @@
 # OASIS_START
-# DO NOT EDIT (digest: 93ac034820228182d2366b3c2ded2e1f)
+# DO NOT EDIT (digest: 00f7b0c12f123f45a8f9edb9786d1a97)
 # Ignore VCS directories, you can use the same kind of rule outside 
 # OASIS_START/STOP if you want to exclude directories that contains 
 # useless stuff for the build process
@@ -14,16 +14,16 @@
 "_darcs": -traverse
 "_darcs": not_hygienic
 # Library Fuse
-"lib": include
+"lib/Fuse.cmxs": use_Fuse
 <lib/*.ml{,i}>: oasis_library_fuse_ccopt
 "lib/Unix_util_stubs.c": oasis_library_fuse_ccopt
 "lib/Fuse_bindings_stubs.c": oasis_library_fuse_ccopt
 "lib/Fuse_util.c": oasis_library_fuse_ccopt
 <lib/Fuse.{cma,cmxa}>: oasis_library_fuse_cclib
-"lib/libFuse.lib": oasis_library_fuse_cclib
-"lib/dllFuse.dll": oasis_library_fuse_cclib
-"lib/libFuse.a": oasis_library_fuse_cclib
-"lib/dllFuse.so": oasis_library_fuse_cclib
+"lib/libFuse_stubs.lib": oasis_library_fuse_cclib
+"lib/dllFuse_stubs.dll": oasis_library_fuse_cclib
+"lib/libFuse_stubs.a": oasis_library_fuse_cclib
+"lib/dllFuse_stubs.so": oasis_library_fuse_cclib
 <lib/Fuse.{cma,cmxa}>: oasis_library_fuse_byte
 <lib/*.ml{,i}>: oasis_library_fuse_byte
 "lib/Unix_util_stubs.c": oasis_library_fuse_byte
@@ -34,7 +34,7 @@
 "lib/Unix_util_stubs.c": oasis_library_fuse_native
 "lib/Fuse_bindings_stubs.c": oasis_library_fuse_native
 "lib/Fuse_util.c": oasis_library_fuse_native
-<lib/Fuse.{cma,cmxa}>: use_libFuse
+<lib/Fuse.{cma,cmxa}>: use_libFuse_stubs
 <lib/*.ml{,i}>: pkg_unix
 <lib/*.ml{,i}>: pkg_threads
 <lib/*.ml{,i}>: pkg_bigarray

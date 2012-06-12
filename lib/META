@@ -1,10 +1,12 @@
 # OASIS_START
-# DO NOT EDIT (digest: 389f122a3433cec06d61c66ade8ddb52)
-version = "2.7.1+cvs~oasis"
+# DO NOT EDIT (digest: 849b3e76036762c6753eface57dcec79)
+version = "2.7.1+cvs~oasis3"
 description = "OCaml bindings for FUSE"
 requires = "unix threads bigarray"
 archive(byte) = "Fuse.cma"
+archive(byte, plugin) = "Fuse.cma"
 archive(native) = "Fuse.cmxa"
+archive(native, plugin) = "Fuse.cmxs"
 exists_if = "Fuse.cma"
 # OASIS_STOP
 
