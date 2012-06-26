@@ -1,7 +1,7 @@
 OASISFormat: 0.3
 OCamlVersion: >= 3.08.0
 Name: ocamlfuse
-Version: 2.7.1+cvs~oasis3
+Version: 2.7.1-cvs~oasis1
 LicenseFile: LICENSE
 License: GPL2
 BuildType: ocamlbuild (0.3)
