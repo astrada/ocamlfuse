@@ -1,49 +1,21 @@
 OASISFormat: 0.3
 OCamlVersion: >= 3.08.0
 Name: ocamlfuse
-Version: 2.7.1-cvs~oasis1
-LicenseFile: LICENSE
-License: GPL2
-BuildType: ocamlbuild (0.3)
+Version: 2.7.1-cvs~oasis2
 Authors: Vincenzo Ciancia
-Homepage: http://sourceforge.net/apps/mediawiki/ocamlfuse/index.php?title=Main_Page
-Plugins: META (0.3)
-BuildTools: ocamlbuild
-
+License: GPL2
+LicenseFile: LICENSE
+BuildType: custom (0.3)
+InstallType: custom (0.3)
+BuildTools: make
+Homepage: http://sourceforge.net/apps/mediawiki/ocamlfuse
 Synopsis: OCaml bindings for FUSE (Filesystem in UserSpacE)
 
-# Library
+XCustomBuild: make -C lib INCDIRS=$pkg_camlidl
+XCustomInstall: make -C lib install
+XCustomUninstall: make -C lib uninstall
+
 Library Fuse
   Path: lib
-  Modules:
-    Fuse,
-    Fuse_bindings,
-    Unix_util
-  InternalModules:
-    Result,
-    Fuse_lib
-  BuildDepends: unix, threads, bigarray
-  CSources:
-    Unix_util_stubs.c,
-    Fuse_bindings.h,
-    Fuse_bindings_stubs.c,
-    Fuse_util.c
-  CCLib: -lfuse -L/usr/lib/ocaml -lcamlidl
-  CCOpt: -D_FILE_OFFSET_BITS=64 -pthread
-  ByteOpt: -linkall
-  NativeOpt: -linkall
-  XMETADescription: OCaml bindings for FUSE
-
-# Examples
-Executable hello
-  Path: example
-  MainIs: hello.ml
-  Install: false
-  BuildDepends: Fuse
-
-Executable fusexmp
-  Path: example
-  MainIs: fusexmp.ml
-  Install: false
-  BuildDepends: Fuse
+  BuildDepends: unix, threads, bigarray, camlidl
 
