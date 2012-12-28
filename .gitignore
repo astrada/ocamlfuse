@@ -9,3 +9,14 @@ _build
 setup.data
 setup.log
 
+._d
+._bcdi
+._ncdi
+*.a
+*.cm*
+*.o
+*.so
+Fuse_bindings.h
+Fuse_bindings.ml*
+Fuse_bindings_stubs.c
+
