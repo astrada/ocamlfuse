@@ -79,11 +79,11 @@ quote(h,"#define __file_info file_info");
 [ptr] struct fuse_operations * get_fuse_operations();
 void set_fuse_operations([ref] const struct fuse_operation_names * op);
 
-[blocking,ptr] struct fuse_cmd * __fuse_read_cmd([ptr,in] struct fuse *f);
-[blocking] void __fuse_process_cmd([ptr] struct fuse *f,[ptr,in] struct fuse_cmd *cmd);
+[blocking,ptr] struct fuse_cmd * fuse_read_cmd([ptr,in] struct fuse *f);
+[blocking] void fuse_process_cmd([ptr] struct fuse *f,[ptr,in] struct fuse_cmd *cmd);
 
 void ml_fuse_init();
 void ml_fuse_main(int argc,[size_is(argc)] str argv[],[ptr] const struct fuse_operations *op);
 
-[blocking] boolean __fuse_exited([ptr] struct fuse * f);
+[blocking] boolean fuse_exited([ptr] struct fuse * f);
 
