@@ -41,10 +41,10 @@ let fuse_loop fuse (multithreaded) =
     then fun x y -> ignore (Thread.create x y) 
     else fun x y -> ignore (x y)
   in
-    while not (__fuse_exited fuse) do
-      let cmd = __fuse_read_cmd fuse in
+    while not (fuse_exited fuse) do
+      let cmd = fuse_read_cmd fuse in
 	if not (is_null cmd)
-        then f (__fuse_process_cmd fuse) cmd
+        then f (fuse_process_cmd fuse) cmd
     done
 
 let _ = Callback.register "ocaml_fuse_loop" fuse_loop
