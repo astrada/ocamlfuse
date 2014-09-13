@@ -27,7 +27,11 @@
 #include <stddef.h>
 #include <string.h>
 #include <errno.h>
+#if defined(__APPLE__)
+#include <sys/mount.h>
+#else
 #include <sys/vfs.h>
+#endif
 #include <sys/statvfs.h>
 
 #include <caml/mlvalues.h>
