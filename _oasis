@@ -3,7 +3,7 @@ OCamlVersion: >= 3.08.0
 Name: ocamlfuse
 Version: 2.7.1-cvs2
 Authors: Vincenzo Ciancia
-License: GPL2
+License: GPL
 LicenseFile: LICENSE
 BuildType: custom (0.3)
 InstallType: custom (0.3)
