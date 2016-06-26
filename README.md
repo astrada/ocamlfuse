@@ -3,7 +3,7 @@ ocamlfuse
 
 This repository is cloned from the last CVS snapshot of
 [OCamlFuse](http://sourceforge.net/projects/ocamlfuse/), with OASIS support
-added, and with patches (see #1 and #3) to make it compile on Mac OS X. 
+added, and with patches (see [#1](https://github.com/astrada/ocamlfuse/pull/1) and [#3](https://github.com/astrada/ocamlfuse/pull/3)) to make it compile on Mac OS X. 
 
 Last updated: 2016-06-26
 
