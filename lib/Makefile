@@ -3,7 +3,15 @@ OCAMLMAKEFILE=../OCamlMakefile
 SOURCES=Result.ml Unix_util.ml Unix_util_stubs.c Fuse_bindings.idl Fuse_util.c Fuse_lib.ml Fuse.ml
 RESULT=Fuse
 LIBS=bigarray
-CLIBS=fuse
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+	CLIBS=osxfuse
+	CPPFLAGS=-I/usr/local/include/osxfuse
+	INCDIRS=$(shell opam config var lib)/camlidl
+	LIBDIRS=/usr/local/lib
+else
+	CLIBS=fuse
+endif
 OCAMLLDFLAGS=-linkall
 THREADS=threads
 TRASH=*~ \\\#*
