@@ -1,12 +1,12 @@
-OASISFormat: 0.3
+OASISFormat: 0.4
 OCamlVersion: >= 3.08.0
 Name: ocamlfuse
 Version: 2.7.1-cvs3
 Authors: Vincenzo Ciancia
 License: GPL
 LicenseFile: LICENSE
-BuildType: custom (0.3)
-InstallType: custom (0.3)
+BuildType: custom (0.4)
+InstallType: custom (0.4)
 BuildTools: make
 Homepage: http://sourceforge.net/apps/mediawiki/ocamlfuse
 Synopsis: OCaml bindings for FUSE (Filesystem in UserSpacE)
