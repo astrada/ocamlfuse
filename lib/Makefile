@@ -1,6 +1,6 @@
 OCAMLMAKEFILE=../OCamlMakefile
 
-SOURCES=Result.ml Unix_util.ml Unix_util_stubs.c Fuse_bindings.idl Fuse_util.c Fuse_lib.ml Fuse.ml
+SOURCES=Result.ml Thread_pool.ml Unix_util.ml Unix_util_stubs.c Fuse_bindings.idl Fuse_util.c Fuse_lib.ml Fuse.ml
 RESULT=Fuse
 LIBS=bigarray
 UNAME_S := $(shell uname -s)
