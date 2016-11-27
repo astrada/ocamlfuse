@@ -3,6 +3,7 @@ OCamlVersion: >= 3.08.0
 Name: ocamlfuse
 Version: 2.7.1-cvs3
 Authors: Vincenzo Ciancia
+Maintainers: Alessandro Strada <alessandro.strada@gmail.com>
 License: GPL
 LicenseFile: LICENSE
 BuildType: custom (0.4)
@@ -10,6 +11,12 @@ InstallType: custom (0.4)
 BuildTools: make
 Homepage: http://sourceforge.net/apps/mediawiki/ocamlfuse
 Synopsis: OCaml bindings for FUSE (Filesystem in UserSpacE)
+Description: This is a binding to FUSE for the OCaml programming language,
+  enabling you to write multithreaded filesystems in the OCaml language. It
+  has been designed with simplicity as a goal, as you can see by looking at
+  example/fusexmp.ml. Efficiency has also been a separate goal. The Bigarray
+  library is used for read and writes, allowing the library to do zero-copy in
+  OCaml land.
 
 XCustomBuild: make -C lib INCDIRS=$pkg_camlidl
 XCustomInstall: make -C lib install
