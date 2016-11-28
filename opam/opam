@@ -3,8 +3,8 @@ maintainer: "Alessandro Strada <alessandro.strada@gmail.com>"
 authors: [ "Vincenzo Ciancia" ]
 license: "GPL"
 homepage: "http://sourceforge.net/apps/mediawiki/ocamlfuse"
-bug-reports: "https://github.com/astrada/ocamlfuse/issues"
 dev-repo: "https://github.com/astrada/ocamlfuse.git"
+bug-reports: "https://github.com/astrada/ocamlfuse/issues"
 build: [
   ["ocaml" "setup.ml" "-configure" "--prefix" prefix]
   ["ocaml" "setup.ml" "-build"]
