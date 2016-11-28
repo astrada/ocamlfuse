@@ -49,7 +49,7 @@ let signal_work_done thread_id pool =
 let add_work f x pool =
   Mutex.lock pool.lock;
   try
-    while Hashtbl.length pool.table > pool.max_threads do
+    while Hashtbl.length pool.table >= pool.max_threads do
       Condition.wait pool.condition pool.lock;
     done;
     let f' x =
