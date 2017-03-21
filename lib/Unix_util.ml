@@ -24,7 +24,7 @@
   vincenzo_ml@yahoo.it
 *)
 
-open Result
+open Fuse_result
 
 external read_noexn : Unix.file_descr -> (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t -> int result = "unix_util_read"
 external write_noexn : Unix.file_descr -> (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t -> int result = "unix_util_write"
