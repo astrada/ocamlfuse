@@ -1,7 +1,7 @@
 OASISFormat: 0.4
 OCamlVersion: >= 3.08.0
 Name: ocamlfuse
-Version: 2.7.1-cvs4
+Version: 2.7.1-cvs5
 Authors: Vincenzo Ciancia
 Maintainers: Alessandro Strada <alessandro.strada@gmail.com>
 License: GPL
