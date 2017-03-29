@@ -27,7 +27,7 @@
 open Fuse_bindings
 open String
 open Thread
-open Result
+open Fuse_result
 
 let _ = Callback.register "ocaml_list_length" List.length
 
