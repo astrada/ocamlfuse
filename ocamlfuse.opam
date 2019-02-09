@@ -1,0 +1,37 @@
+opam-version: "2.0"
+maintainer: "Alessandro Strada <alessandro.strada@gmail.com>"
+authors: [ "Vincenzo Ciancia" ]
+synopsis: "Bindings to Fuse"
+description: """
+OCaml bindings for FUSE (Filesystem in UserSpacE)
+This is a binding to FUSE for the OCaml programming language, enabling
+you to write multithreaded filesystems in the OCaml language. It has
+been designed with simplicity as a goal, as you can see by looking at
+example/fusexmp.ml. Efficiency has also been a separate goal. The
+Bigarray library is used for read and writes, allowing the library to
+do zero-copy in OCaml land.
+"""
+license: "GPL"
+homepage: "https://github.com/astrada/ocamlfuse"
+dev-repo: "git+https://github.com/astrada/ocamlfuse.git"
+bug-reports: "https://github.com/astrada/ocamlfuse/issues"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "ocaml" {>= "3.08.0"}
+  "base-bigarray"
+  "base-threads"
+  "base-unix"
+  "camlidl"
+  "dune" {build}
+]
+depexts: [
+  [["debian"] ["libfuse-dev"]]
+  [["ubuntu"] ["libfuse-dev"]]
+  [["alpine"] ["fuse-dev"]]
+  [["centos"] ["fuse-devel"]]
+  [["fedora"] ["fuse-devel"]]
+  [["opensuse"] ["fuse-devel"]]
+  [["osx" "homebrew"] ["Caskroom/cask/osxfuse"]]
+]
