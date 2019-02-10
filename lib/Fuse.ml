@@ -25,7 +25,11 @@
 *)
 
 open Fuse_lib
-open Unix_util
+
+module Unix_util = Unix_util
+module Fuse_bindings = Fuse_bindings
+module Fuse_lib = Fuse_lib
+module Fuse_result = Fuse_result
 
 type buffer = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
 

@@ -1,5 +1,0 @@
-version = "2.7.1"
-description = "Bindings to fuse"
-archive(byte) = "Fuse.cma"
-archive(native) = "Fuse.cmxa"
-requires = "unix threads bigarray camlidl"

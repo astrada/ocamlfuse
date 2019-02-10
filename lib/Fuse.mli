@@ -24,6 +24,11 @@
   vincenzo_ml@yahoo.it
 *)
 
+module Unix_util = Unix_util
+module Fuse_bindings = Fuse_bindings
+module Fuse_lib = Fuse_lib
+module Fuse_result = Fuse_result
+
 type buffer = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
 type context = Fuse_bindings.__fuse_context
 val get_context : unit -> context
