@@ -26,8 +26,18 @@ You also need ocaml >= 3.08 and camlidl >=1.05 (3.07/1.04 won't work,
 you need the 1.05 version of camlidl and consequently the 3.08 version
 of ocaml).
 
+GETTING STARTED
+
+The reccomended way to install this library is using
+[OPAM](http://opam.ocaml.org/).
+
+    opam install ocamlfuse
+
+
 INSTALLATION
 
+If you don't want to install OPAM, you need to manually install this
+prerequisites:
 
 1) Prerequisites
 
@@ -51,23 +61,28 @@ INSTALLATION
 
   http://caml.inria.fr/camlidl
 
+- dune >= 1.6
+
+  available at
+  
+  https://dune.build/
+
 2) Installing OCamlFuse
 
   unpack the tarball, then
 
-  cd lib
   make
-  sudo make install
+  make install
 
   This will install ocamlfuse in your ocaml library directory. To uninstall
   it you can use "make uninstall"
 
 TESTING
 
-cd example && make
-cd example
+make example
+cd _build/default/example
 mkdir tmp
-./fusexmp tmp
+./fusexmp.exe tmp
 cd tmp #you'll find a copy of your "/" directory here
 
 NOTE: if you access the "clone" of the mountpoint of the filesystem, the fs will hang (kill it and then use fusermount -u to umount it). This is a known bug/limitation.
