@@ -71,19 +71,19 @@ prerequisites:
 
   unpack the tarball, then
 
-  make
-  make install
+    make
+    make install
 
   This will install ocamlfuse in your ocaml library directory. To uninstall
   it you can use "make uninstall"
 
 TESTING
 
-make example
-cd _build/default/example
-mkdir tmp
-./fusexmp.exe tmp
-cd tmp #you'll find a copy of your "/" directory here
+    make example
+    cd _build/default/example
+    mkdir tmp
+    ./fusexmp.exe tmp
+    cd tmp #you'll find a copy of your "/" directory here
 
 NOTE: if you access the "clone" of the mountpoint of the filesystem, the fs will hang (kill it and then use fusermount -u to umount it). This is a known bug/limitation.
 
