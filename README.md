@@ -22,9 +22,7 @@ You need fuse (version 2.7 or greater)
 
 http://www.sourceforge.net/projects/fuse
 
-You also need ocaml >= 3.08 and camlidl >=1.05 (3.07/1.04 won't work,
-you need the 1.05 version of camlidl and consequently the 3.08 version
-of ocaml).
+You also need ocaml >= 4.02.3 and camlidl >= 1.05.
 
 GETTING STARTED
 
@@ -45,21 +43,21 @@ prerequisites:
 
   Should be in the major linux distributions, but you can find it at
 
-  http://fuse.sourceforge.net
+  https://fuse.sourceforge.net
 
-  You need to install libfuse-dev in debian and ubuntu.
+  You need to install `libfuse-dev` in debian and ubuntu.
 
-- OCaml >= 3.08
+- OCaml >= 4.02.3
 
   Should be there in the major linux distributions, but is also available at
 
-  http://caml.inria.fr
+  https://www.ocaml.org
 
 - CamlIDL >= 1.05
 
   present at least in ubuntu, also available at
 
-  http://caml.inria.fr/camlidl
+  https://github.com/xavierleroy/camlidl
 
 - dune >= 1.6
 

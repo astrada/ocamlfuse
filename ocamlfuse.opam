@@ -9,13 +9,13 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "3.08.0"}
+  "ocaml" {>= "4.02.3"}
   "base-bigarray"
   "base-threads"
   "base-unix"
   "camlidl"
   "dune"
-  "dune-configurator" {< "2.6"}
+  "dune-configurator"
 ]
 depexts: [
   ["libfuse-dev"] {os-family = "debian"}
