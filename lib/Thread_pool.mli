@@ -30,4 +30,3 @@ val create : ?max_threads:int -> unit -> t
 val add_work : ('a -> 'b) -> 'a -> t -> unit
 
 val shutdown : t -> unit
-

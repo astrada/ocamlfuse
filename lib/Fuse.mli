@@ -29,9 +29,13 @@ module Fuse_bindings = Fuse_bindings
 module Fuse_lib = Fuse_lib
 module Fuse_result = Fuse_result
 
-type buffer = (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
+type buffer =
+  (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
+
 type context = Fuse_bindings.__fuse_context
+
 val get_context : unit -> context
+
 type xattr_flags = AUTO | CREATE | REPLACE
 
 type operations = {
@@ -64,12 +68,14 @@ type operations = {
   releasedir : string -> Unix.open_flag list -> int -> unit;
   fsyncdir : string -> bool -> int -> unit;
   init : unit -> unit;
+      (* TODO: missing callbacks:
 
-(* TODO: missing callbacks:
-
-   destroy, access, create, ftruncate, fgetattr, lock, utimens, 
-   bmap, flag_nullpath_ok, ioctl, poll *)
+         destroy, access, create, ftruncate, fgetattr, lock, utimens,
+         bmap, flag_nullpath_ok, ioctl, poll *)
 }
+
 val op_names_of_operations : operations -> Fuse_bindings.fuse_operation_names
+
 val default_operations : operations
+
 val main : Fuse_bindings.str array -> operations -> unit

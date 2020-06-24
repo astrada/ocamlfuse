@@ -30,27 +30,27 @@ type t = {
   table : (int, Thread.t) Hashtbl.t;
 }
 
-let create ?(max_threads = 128) () = {
-  max_threads;
-  lock = Mutex.create ();
-  condition = Condition.create ();
-  table = Hashtbl.create max_threads;
-}
+let create ?(max_threads = 128) () =
+  {
+    max_threads;
+    lock = Mutex.create ();
+    condition = Condition.create ();
+    table = Hashtbl.create max_threads;
+  }
 
 let signal_work_done thread_id pool =
   Mutex.lock pool.lock;
   try
     Hashtbl.remove pool.table thread_id;
     Condition.signal pool.condition;
-    Mutex.unlock pool.lock;
-  with _ ->
     Mutex.unlock pool.lock
+  with _ -> Mutex.unlock pool.lock
 
 let add_work f x pool =
   Mutex.lock pool.lock;
   try
     while Hashtbl.length pool.table >= pool.max_threads do
-      Condition.wait pool.condition pool.lock;
+      Condition.wait pool.condition pool.lock
     done;
     let f' x =
       let thread = Thread.self () in
@@ -61,12 +61,7 @@ let add_work f x pool =
     let thread = Thread.create f' x in
     let thread_id = Thread.id thread in
     Hashtbl.add pool.table thread_id thread;
-    Mutex.unlock pool.lock;
-  with _ ->
     Mutex.unlock pool.lock
+  with _ -> Mutex.unlock pool.lock
 
-let shutdown pool =
-  Hashtbl.iter
-    (fun _ thread -> Thread.join thread)
-    pool.table
-
+let shutdown pool = Hashtbl.iter (fun _ thread -> Thread.join thread) pool.table
