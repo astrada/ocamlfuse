@@ -24,6 +24,7 @@
   vincenzo_ml@yahoo.it
 */
 
+#include <unistd.h>
 #include <stddef.h>
 #include <string.h>
 #include <errno.h>
