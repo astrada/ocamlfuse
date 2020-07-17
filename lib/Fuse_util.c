@@ -598,18 +598,18 @@ static OPNAME##_RTYPE gm281_ops_##OPNAME OPNAME##_ARGS \
 {\
   CAMLparam0(); \
   CAMLlocal4(vstring, vpath, vres, vtmp); \
-  int res=-1; \
+  OPNAME##_RTYPE res=(typeof (res))-1L; \
   OPNAME##_CB \
   if (Tag_val(vres)==1) /* Result is not Bad */ \
      { \
-       res=0; \
+       res=(typeof (res))0L; \
        OPNAME##_RES /* res can be changed here */ \
      } \
   else \
   { \
     if (Is_block(Field(vres,0)))  /* This is EUNKNOWNERR of int in ocaml */ \
-	res=-Int_val(Field(Field(vres,0),0));				\
-    else res=-ml2c_unix_error(Int_val(Field(vres,0))); \
+	res=(typeof (res))(long)-Int_val(Field(Field(vres,0),0));				\
+    else res=(typeof (res))(long)-ml2c_unix_error(Int_val(Field(vres,0))); \
   } \
   CAMLreturnT(OPNAME##_RTYPE, res); \
 }\
