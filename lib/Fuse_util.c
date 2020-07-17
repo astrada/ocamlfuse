@@ -347,9 +347,9 @@ static struct fuse_operations ops = {
   FOR_ALL_OPS(SET_NULL_OP)
 };
 
-static value * ocaml_list_length=NULL;
+static const value * ocaml_list_length=NULL;
 
-#define DECLARE_OP_CLOSURE(OPNAME) static value * OPNAME##_closure=NULL;
+#define DECLARE_OP_CLOSURE(OPNAME) static const value * OPNAME##_closure=NULL;
 FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 
 #define init_ARGS (struct fuse_conn_info *conn)
@@ -531,7 +531,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define setxattr_CB \
     vpath = copy_string(path); \
     vstring = alloc_string(size); \
-    memcpy(String_val(vstring),val,size); \
+    memcpy(&Byte(String_val(vstring),0),val,size); \
     vres=callback4(*setxattr_closure,vpath,copy_string(name),vstring,c2ml_setxattr_flags(flags));
 #define setxattr_RES
 
@@ -642,7 +642,7 @@ struct fuse_operations * get_fuse_operations()
   return &ops;
 }
 
-value * ocaml_fuse_loop_closure;
+const value * ocaml_fuse_loop_closure;
 
 int mainloop(struct fuse * f,int multithreaded)
 {
