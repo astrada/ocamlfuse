@@ -93,13 +93,13 @@ CAMLprim value c2ml_setxattr_flags(int flags)
 }
 
 /* This part shamelessly copied from mlfuse */
-#define ADDFLAGT(T, X) \
-  num_ml_constr--;\
-  if (T) {\
-    tmp = caml_alloc(2, 0);\
-    Store_field (tmp, 0, Val_int(num_ml_constr));\
-    Store_field (tmp, 1, res);\
-    res = tmp;\
+#define ADDFLAGT(T, X)                            \
+  num_ml_constr--;                                \
+  if (T) {                                        \
+    tmp = caml_alloc(2, 0);                       \
+    Store_field (tmp, 0, Val_int(num_ml_constr)); \
+    Store_field (tmp, 1, res);                    \
+    res = tmp;                                    \
   }
 
 #define ADDFLAG(X) ADDFLAGT(flags & X, X)
@@ -299,36 +299,36 @@ void ml2c_Unix_struct_statvfs(value v,struct statvfs * st)
    */
 }
 
-#define FOR_ALL_OPS(MACRO) \
-    MACRO(init) \
-    MACRO(getattr) \
-    MACRO(readlink) \
-    MACRO(readdir) \
-    MACRO(opendir) \
-    MACRO(releasedir) \
-    MACRO(fsyncdir) \
-    MACRO(mknod) \
-    MACRO(mkdir) \
-    MACRO(symlink) \
-    MACRO(unlink) \
-    MACRO(rmdir) \
-    MACRO(rename) \
-    MACRO(link) \
-    MACRO(chmod) \
-    MACRO(chown) \
-    MACRO(truncate) \
-    MACRO(utime) \
-    MACRO(open) \
-    MACRO(read) \
-    MACRO(write) \
-    MACRO(statfs) \
-    MACRO(release) \
-    MACRO(flush) \
-    MACRO(fsync) \
-    MACRO(setxattr) \
-    MACRO(getxattr) \
-    MACRO(listxattr) \
-    MACRO(removexattr)
+#define FOR_ALL_OPS(MACRO)                      \
+  MACRO(init)                                   \
+  MACRO(getattr)                                \
+  MACRO(readlink)                               \
+  MACRO(readdir)                                \
+  MACRO(opendir)                                \
+  MACRO(releasedir)                             \
+  MACRO(fsyncdir)                               \
+  MACRO(mknod)                                  \
+  MACRO(mkdir)                                  \
+  MACRO(symlink)                                \
+  MACRO(unlink)                                 \
+  MACRO(rmdir)                                  \
+  MACRO(rename)                                 \
+  MACRO(link)                                   \
+  MACRO(chmod)                                  \
+  MACRO(chown)                                  \
+  MACRO(truncate)                               \
+  MACRO(utime)                                  \
+  MACRO(open)                                   \
+  MACRO(read)                                   \
+  MACRO(write)                                  \
+  MACRO(statfs)                                 \
+  MACRO(release)                                \
+  MACRO(flush)                                  \
+  MACRO(fsync)                                  \
+  MACRO(setxattr)                               \
+  MACRO(getxattr)                               \
+  MACRO(listxattr)                              \
+  MACRO(removexattr)
 
 /*
    TODO: missing callbacks for fuse API version 2.7
@@ -378,14 +378,14 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define readdir_CALL_ARGS (path, buf, filler, offset, info)
 #define readdir_RTYPE int
 #define readdir_CB vpath = caml_copy_string(path); vres=caml_callback2(*readdir_closure,vpath,Val_int(info->fh));
-#define readdir_RES \
-  vtmp=Field(vres,0);	    \
-  while (Is_block(vtmp))    \
-    { \
-      if (filler(buf,String_val(Field(vtmp,0)),NULL,0)) break; \
-      if (res != 0) break;				    \
-      vtmp=Field(vtmp,1);				    \
-    }
+#define readdir_RES                                           \
+  vtmp=Field(vres,0);                                         \
+  while (Is_block(vtmp))                                      \
+  {                                                           \
+    if (filler(buf,String_val(Field(vtmp,0)),NULL,0)) break;  \
+    if (res != 0) break;                                      \
+    vtmp=Field(vtmp,1);                                       \
+  }
 
 #define mknod_ARGS (const char *path, mode_t mode, dev_t rdev)
 #define mknod_CALL_ARGS (path, mode, rdev)
@@ -420,28 +420,28 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define symlink_ARGS (const char *path, const char *dest)
 #define symlink_CALL_ARGS (path, dest)
 #define symlink_RTYPE int
-#define symlink_CB \
-     vpath = caml_copy_string(path); \
-     vtmp = caml_copy_string(dest); \
-     vres=caml_callback2(*symlink_closure,vpath,vtmp);
+#define symlink_CB                                  \
+  vpath = caml_copy_string(path);                   \
+  vtmp = caml_copy_string(dest);                    \
+  vres=caml_callback2(*symlink_closure,vpath,vtmp);
 #define symlink_RES
 
 #define rename_ARGS (const char *path, const char *dest)
 #define rename_CALL_ARGS (path, dest)
 #define rename_RTYPE int
-#define rename_CB \
-     vpath = caml_copy_string(path); \
-     vtmp = caml_copy_string(dest); \
-     vres=caml_callback2(*rename_closure,vpath,vtmp);
+#define rename_CB                                   \
+  vpath = caml_copy_string(path);                   \
+  vtmp = caml_copy_string(dest);                    \
+  vres=caml_callback2(*rename_closure,vpath,vtmp);
 #define rename_RES
 
 #define link_ARGS (const char *path, const char *dest)
 #define link_CALL_ARGS (path, dest)
 #define link_RTYPE int
-#define link_CB  \
-     vpath = caml_copy_string(path); \
-     vtmp = caml_copy_string(dest); \
-     vres=caml_callback2(*link_closure,vpath,vtmp);
+#define link_CB                                   \
+  vpath = caml_copy_string(path);                 \
+  vtmp = caml_copy_string(dest);                  \
+  vres=caml_callback2(*link_closure,vpath,vtmp);
 #define link_RES
 
 #define chmod_ARGS (const char *path, mode_t mode)
@@ -483,16 +483,16 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define read_ARGS (const char *path, char *buf, size_t size, off_t offset,struct fuse_file_info * fi)
 #define read_CALL_ARGS (path, buf, size, offset,fi)
 #define read_RTYPE int
-#define read_CB \
-  vpath = caml_copy_string(path); \
+#define read_CB                                                         \
+  vpath = caml_copy_string(path);                                       \
   vres=callback4(*read_closure,vpath,caml_ba_alloc_dims(CAML_BA_UINT8|CAML_BA_C_LAYOUT,1,buf,size),caml_copy_int64(offset),Val_int(fi->fh));
 #define read_RES res=Int_val(Field(vres,0));
 
 #define write_ARGS (const char *path, const char *buf, size_t size,off_t offset,struct fuse_file_info * fi) /* TODO: check usage of the writepages field of fi */
 #define write_CALL_ARGS (path, buf, size,offset,fi)
 #define write_RTYPE int
-#define write_CB \
-  vpath = caml_copy_string(path); \
+#define write_CB                                                        \
+  vpath = caml_copy_string(path);                                       \
   vres=callback4(*write_closure,vpath,caml_ba_alloc_dims(CAML_BA_UINT8|CAML_BA_C_LAYOUT,1,(char *)buf,size),caml_copy_int64(offset),Val_int(fi->fh));
 #define write_RES res=Int_val(Field(vres,0));
 
@@ -535,64 +535,64 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define setxattr_ARGS (const char *path, const char *name, const char *val,size_t size,int flags)
 #define setxattr_CALL_ARGS (path, name, val, size, flags)
 #define setxattr_RTYPE int
-#define setxattr_CB \
-    vpath = caml_copy_string(path); \
-    vstring = caml_alloc_string(size); \
-    memcpy(&Byte(String_val(vstring),0),val,size); \
-    vres=callback4(*setxattr_closure,vpath,caml_copy_string(name),vstring,c2ml_setxattr_flags(flags));
+#define setxattr_CB                                                     \
+  vpath = caml_copy_string(path);                                       \
+  vstring = caml_alloc_string(size);                                    \
+  memcpy(&Byte(String_val(vstring),0),val,size);                        \
+  vres=callback4(*setxattr_closure,vpath,caml_copy_string(name),vstring,c2ml_setxattr_flags(flags));
 #define setxattr_RES
 
 #define getxattr_ARGS (const char *path, const char *name, char *val,size_t size)
 #define getxattr_CALL_ARGS (path, name, val, size)
 #define getxattr_RTYPE int
-#define getxattr_CB \
-  vpath = caml_copy_string(path); \
+#define getxattr_CB                                                     \
+  vpath = caml_copy_string(path);                                       \
   vres=caml_callback2(*getxattr_closure,vpath,caml_copy_string(name));
-#define getxattr_RES \
-     res=caml_string_length(Field(vres,0)); \
-     if (size > 0) \
-        if (caml_string_length(Field(vres,0))>=size) \
-        { \
-           res = -UNKNOWN_ERR; \
-        } \
-        else \
-        { \
-	  memcpy(val,String_val(Field(vres,0)),caml_string_length(Field(vres,0))); \
-        }
+#define getxattr_RES                                                    \
+  res=caml_string_length(Field(vres,0));                                \
+  if (size > 0)                                                         \
+    if (caml_string_length(Field(vres,0))>=size)                        \
+    {                                                                   \
+      res = -UNKNOWN_ERR;                                               \
+    }                                                                   \
+    else                                                                \
+    {                                                                   \
+      memcpy(val,String_val(Field(vres,0)),caml_string_length(Field(vres,0))); \
+    }
 
 #define listxattr_ARGS (const char *path, char *list, size_t size)
 #define listxattr_CALL_ARGS (path, list, size)
 #define listxattr_RTYPE int
 #define listxattr_CB vpath = caml_copy_string(path); vres=caml_callback(*listxattr_closure,vpath);
-#define listxattr_RES \
-     vtmp=Field(Field(vres,0),0);\
-     int len; \
-     char * dest=list; \
-     int rem=size; \
-     if (size==0) \
-     { \
-        res = Int_val(Field(Field(vres,0),1)); \
-     } \
-     else \
-     { \
-        while (Is_block(vtmp)) \
-        { \
-           len = caml_string_length(Field(vtmp,0))+1; \
-           if (rem>=len) \
-           { \
-              memcpy(dest,String_val(Field(vtmp,0)),len); \
-              vtmp=Field(vtmp,1);\
-              dest+=len; \
-              rem=rem-len; \
-           } \
-           else \
-           { \
-             res = -ERANGE; \
-             break; \
-           } \
-        } \
-        res=size-rem; \
-     }
+#define listxattr_RES                               \
+  vtmp=Field(Field(vres,0),0);                      \
+  int len;                                          \
+  char * dest=list;                                 \
+  int rem=size;                                     \
+  if (size==0)                                      \
+  {                                                 \
+    res = Int_val(Field(Field(vres,0),1));          \
+  }                                                 \
+  else                                              \
+  {                                                 \
+    while (Is_block(vtmp))                          \
+    {                                               \
+      len = caml_string_length(Field(vtmp,0))+1;    \
+      if (rem>=len)                                 \
+      {                                             \
+        memcpy(dest,String_val(Field(vtmp,0)),len); \
+        vtmp=Field(vtmp,1);                         \
+        dest+=len;                                  \
+        rem=rem-len;                                \
+      }                                             \
+      else                                          \
+      {                                             \
+        res = -ERANGE;                              \
+        break;                                      \
+      }                                             \
+    }                                               \
+    res=size-rem;                                   \
+  }
 
 #define removexattr_ARGS (const char *path, const char *name)
 #define removexattr_CALL_ARGS (path, name)
@@ -600,44 +600,44 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define removexattr_CB vpath = caml_copy_string(path); vres=caml_callback2(*removexattr_closure,vpath,caml_copy_string(name));
 #define removexattr_RES
 
-#define CALLBACK(OPNAME) \
-static OPNAME##_RTYPE gm281_ops_##OPNAME OPNAME##_ARGS \
-{\
-  CAMLparam0(); \
-  CAMLlocal4(vstring, vpath, vres, vtmp); \
-  OPNAME##_RTYPE res=(typeof (res))-1L; \
-  OPNAME##_CB \
-  if (Tag_val(vres)==1) /* Result is not Bad */ \
-     { \
-       res=(typeof (res))0L; \
-       OPNAME##_RES /* res can be changed here */ \
-     } \
-  else \
-  { \
-    if (Is_block(Field(vres,0)))  /* This is EUNKNOWNERR of int in ocaml */ \
-	res=(typeof (res))(long)-Int_val(Field(Field(vres,0),0));				\
-    else res=(typeof (res))(long)-ml2c_unix_error(Int_val(Field(vres,0))); \
-  } \
-  CAMLreturnT(OPNAME##_RTYPE, res); \
-}\
-\
-static OPNAME##_RTYPE ops_##OPNAME OPNAME##_ARGS \
-{ \
-  caml_release_runtime_system();                              \
-    OPNAME##_RTYPE ret = gm281_ops_##OPNAME OPNAME##_CALL_ARGS; \
-  caml_acquire_runtime_system();                              \
-    return ret; \
-}
+#define CALLBACK(OPNAME)                                                \
+  static OPNAME##_RTYPE gm281_ops_##OPNAME OPNAME##_ARGS                \
+  {                                                                     \
+    CAMLparam0();                                                       \
+    CAMLlocal4(vstring, vpath, vres, vtmp);                             \
+    OPNAME##_RTYPE res=(typeof (res))-1L;                               \
+    OPNAME##_CB                                                         \
+      if (Tag_val(vres)==1) /* Result is not Bad */                     \
+      {                                                                 \
+        res=(typeof (res))0L;                                           \
+        OPNAME##_RES /* res can be changed here */                      \
+      }                                                                 \
+      else                                                              \
+      {                                                                 \
+        if (Is_block(Field(vres,0)))  /* This is EUNKNOWNERR of int in ocaml */ \
+          res=(typeof (res))(long)-Int_val(Field(Field(vres,0),0));     \
+        else res=(typeof (res))(long)-ml2c_unix_error(Int_val(Field(vres,0))); \
+      }                                                                 \
+    CAMLreturnT(OPNAME##_RTYPE, res);                                   \
+  }                                                                     \
+                                                                        \
+  static OPNAME##_RTYPE ops_##OPNAME OPNAME##_ARGS                      \
+  {                                                                     \
+    caml_release_runtime_system();                                      \
+    OPNAME##_RTYPE ret = gm281_ops_##OPNAME OPNAME##_CALL_ARGS;         \
+    caml_acquire_runtime_system();                                      \
+    return ret;                                                         \
+  }
 
 FOR_ALL_OPS(CALLBACK)
 
-#define SET_OPERATION(OPNAME) \
-  if (op->OPNAME==NULL) ops.OPNAME=NULL; \
-  else \
-    { \
-      OPNAME##_closure=caml_named_value(op->OPNAME); \
-      ops.OPNAME=ops_##OPNAME; \
-    }
+#define SET_OPERATION(OPNAME)                       \
+  if (op->OPNAME==NULL) ops.OPNAME=NULL;            \
+  else                                              \
+  {                                                 \
+    OPNAME##_closure=caml_named_value(op->OPNAME);  \
+    ops.OPNAME=ops_##OPNAME;                        \
+  }
 
 void set_fuse_operations(struct fuse_operation_names const *op)
 {
