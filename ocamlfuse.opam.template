@@ -1,0 +1,2 @@
+homepage: "http://sourceforge.net/apps/mediawiki/ocamlfuse"
+x-ci-accept-failures: ["oraclelinux-7"]
