@@ -4,16 +4,16 @@
   OCamlFuse is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation (version 2 of the License).
-  
+
   OCamlFuse is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with OCamlFuse.  See the file LICENSE.  If you haven't received
   a copy of the GNU General Public License, write to:
-  
+
   Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA
   02111-1307  USA
@@ -47,7 +47,7 @@ external file_descr_of_int : int -> Unix.file_descr
    http://caml.inria.fr/pub/ml-archives/caml-list/2005/07/bb434b103b1cdbbec3c832d9a72af9a3.fr.html
 
    http://caml.inria.fr/pub/ml-archives/caml-list/2005/07/49ee60ceadbcbbc84b0bce54ad5949b6.fr.html
-   
+
    TODO: learn about caml_failwith (see their code)
 *)
 

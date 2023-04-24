@@ -4,16 +4,16 @@
   OCamlFuse is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation (version 2 of the License).
-  
+
   OCamlFuse is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with OCamlFuse.  See the file LICENSE.  If you haven't received
   a copy of the GNU General Public License, write to:
-  
+
   Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA
   02111-1307  USA
@@ -119,8 +119,8 @@ CAMLprim value c_flags_to_open_flag_list (int flags) {
 }
 /* End of shame */
 
-static int ml2c_unix_error_vect[] = 
-{ 
+static int ml2c_unix_error_vect[] =
+{
   E2BIG,
   EACCES,
   EAGAIN,
@@ -210,16 +210,16 @@ int * invert_array(int * src,int * indim,int * outdim)
   int i=0;
   int srcdim = 0;
 
-  while (src[srcdim]!=0) 
+  while (src[srcdim]!=0)
     {
-      if (src[srcdim]+1>dim) dim=src[srcdim]+1; 
+      if (src[srcdim]+1>dim) dim=src[srcdim]+1;
       srcdim++;
     }
-  
+
   /* Create the result */
   int * res = malloc(dim * sizeof(int));
   for (i = 0;i < dim;i++) res[i]=UNKNOWN_ERR; /* TODO: find a meaningful value */
-  
+
   /* Invert the array */
   for (i = 0;i < srcdim;i++) res[src[i]]=i;
 
@@ -262,7 +262,7 @@ void ml2c_Unix_stats_struct_stat(value v,struct stat * s)
   s->st_uid=Int_val(Field(v,5));
   s->st_gid=Int_val(Field(v,6));
   s->st_rdev=Int_val(Field(v,7));
-  s->st_size=Int64_val(Field(v,8)); 
+  s->st_size=Int64_val(Field(v,8));
   s->st_blksize=512; /* TODO: STUB, at least use the one from statfs */
   s->st_blocks=ceil(((double)s->st_size)/((double)s->st_blksize)); /* TODO: STUB! */
   s->st_atime=Double_val(Field(v,9));
@@ -323,7 +323,7 @@ void ml2c_Unix_struct_statvfs(value v,struct statvfs * st)
     MACRO(listxattr) \
     MACRO(removexattr)
 
-/* 
+/*
    TODO: missing callbacks for fuse API version 2.7
 
    CALLS INTRODUCED FROM 2.3 ON
@@ -357,7 +357,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define init_RTYPE void *
 #define init_CB vres=callback(*init_closure,Val_unit);
 /* TODO: the result from init is wrong, it should return unit */
-#define init_RES 
+#define init_RES
 
 #define getattr_ARGS (const char* path, struct stat * buf)
 #define getattr_CALL_ARGS (path, buf)
@@ -482,21 +482,21 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define read_RES res=Int_val(Field(vres,0));
 
 #define write_ARGS (const char *path, const char *buf, size_t size,off_t offset,struct fuse_file_info * fi) /* TODO: check usage of the writepages field of fi */
-#define write_CALL_ARGS (path, buf, size,offset,fi) 
+#define write_CALL_ARGS (path, buf, size,offset,fi)
 #define write_RTYPE int
 #define write_CB \
   vpath = copy_string(path); \
-  vres=callback4(*write_closure,vpath,alloc_bigarray_dims(BIGARRAY_UINT8|BIGARRAY_C_LAYOUT,1,(char *)buf,size),copy_int64(offset),Val_int(fi->fh)); 
+  vres=callback4(*write_closure,vpath,alloc_bigarray_dims(BIGARRAY_UINT8|BIGARRAY_C_LAYOUT,1,(char *)buf,size),copy_int64(offset),Val_int(fi->fh));
 #define write_RES res=Int_val(Field(vres,0));
 
-#define release_ARGS (const char *path, struct fuse_file_info * fi) 
-#define release_CALL_ARGS (path, fi) 
+#define release_ARGS (const char *path, struct fuse_file_info * fi)
+#define release_CALL_ARGS (path, fi)
 #define release_RTYPE int
 #define release_CB vpath = copy_string(path); vres=callback3(*release_closure,vpath,c_flags_to_open_flag_list(fi->flags),Val_int(fi->fh));
 #define release_RES
 
-#define releasedir_ARGS (const char *path, struct fuse_file_info * fi) 
-#define releasedir_CALL_ARGS (path, fi) 
+#define releasedir_ARGS (const char *path, struct fuse_file_info * fi)
+#define releasedir_CALL_ARGS (path, fi)
 #define releasedir_RTYPE int
 #define releasedir_CB vpath = copy_string(path); vres=callback3(*releasedir_closure,vpath,c_flags_to_open_flag_list(fi->flags),Val_int(fi->fh));
 #define releasedir_RES
@@ -505,7 +505,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define flush_CALL_ARGS (path, fi)
 #define flush_RTYPE int
 #define flush_CB vpath = copy_string(path); vres=callback2(*flush_closure,vpath,Val_int(fi->fh));
-#define flush_RES 
+#define flush_RES
 
 #define statfs_ARGS (const char *path, struct statvfs *stbuf)
 #define statfs_CALL_ARGS (path, stbuf)
@@ -513,14 +513,14 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define statfs_CB vpath = copy_string(path); vres=callback(*statfs_closure,vpath);
 #define statfs_RES ml2c_Unix_struct_statvfs(Field(vres,0),stbuf);
 
-#define fsync_ARGS (const char *path, int isdatasync,struct fuse_file_info * fi) 
-#define fsync_CALL_ARGS (path, isdatasync, fi) 
+#define fsync_ARGS (const char *path, int isdatasync,struct fuse_file_info * fi)
+#define fsync_CALL_ARGS (path, isdatasync, fi)
 #define fsync_RTYPE int
 #define fsync_CB vpath = copy_string(path); vres=callback3(*fsync_closure,vpath,Val_bool(isdatasync),Val_int(fi->fh));
 #define fsync_RES
 
-#define fsyncdir_ARGS (const char *path, int isdatasync,struct fuse_file_info * fi) 
-#define fsyncdir_CALL_ARGS (path, isdatasync, fi) 
+#define fsyncdir_ARGS (const char *path, int isdatasync,struct fuse_file_info * fi)
+#define fsyncdir_CALL_ARGS (path, isdatasync, fi)
 #define fsyncdir_RTYPE int
 #define fsyncdir_CB vpath = copy_string(path); vres=callback3(*fsync_closure,vpath,Val_bool(isdatasync),Val_int(fi->fh));
 #define fsyncdir_RES
@@ -632,7 +632,7 @@ FOR_ALL_OPS(CALLBACK)
       ops.OPNAME=ops_##OPNAME; \
     }
 
-void set_fuse_operations(struct fuse_operation_names const *op) 
+void set_fuse_operations(struct fuse_operation_names const *op)
 {
   FOR_ALL_OPS(SET_OPERATION)
 }
@@ -649,11 +649,11 @@ int mainloop(struct fuse * f,int multithreaded)
   CAMLparam0();
   if (f == NULL)
     return(-1);
-  
+
   CAMLlocal1(_fuse);
   _fuse=caml_alloc(1, Abstract_tag);
   Store_field(_fuse, 0, (value) f);
-  
+
   CAMLreturnT(int, callback2(*ocaml_fuse_loop_closure,_fuse,Val_bool(multithreaded)));
 }
 
@@ -673,7 +673,7 @@ void ml_fuse_main(int argc,str * argv,struct fuse_operations const * op)
 
   struct fuse * fuse = fuse_setup(argc,argv,op,sizeof(struct fuse_operations),&mountpoint,&multithreaded,&fd);
 
-  if (fuse!=NULL) 
+  if (fuse!=NULL)
     {
       mainloop(fuse,multithreaded);
       fuse_teardown(fuse,mountpoint);

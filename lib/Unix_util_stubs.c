@@ -4,16 +4,16 @@
   OCamlFuse is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation (version 2 of the License).
-  
+
   OCamlFuse is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with OCamlFuse.  See the file LICENSE.  If you haven't received
   a copy of the GNU General Public License, write to:
-  
+
   Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA
   02111-1307  USA
@@ -56,16 +56,16 @@ CAMLprim value unix_util_read(value fd,value buf)
   int c_fd = Int_val(fd); /* TODO: unsafe coercion */
   void * c_data = Data_bigarray_val(buf);
   int c_dim = Bigarray_val(buf)->dim[0];
-  
+
   enter_blocking_section();
-  res = read(c_fd, c_data, c_dim); 
+  res = read(c_fd, c_data, c_dim);
   leave_blocking_section();
   if (res >=0)
     {
       vres=alloc(1,1); /* Ok result */
       Store_field(vres,0,Val_int(res));
     }
-  else 
+  else
     {
       vres=alloc(1,0); /* Bad result */
       Store_field(vres,0,Val_int(c2ml_unix_error(res))); /* TODO: EUNKNOWN x is a block */
@@ -81,7 +81,7 @@ CAMLprim value unix_util_write(value fd,value buf)
   int c_fd = Int_val(fd); /* TODO: unsafe coercion */
   void * c_data = Data_bigarray_val(buf);
   int c_dim = Bigarray_val(buf)->dim[0];
-  
+
   enter_blocking_section();
   res = write(c_fd, c_data, c_dim);
   leave_blocking_section();
@@ -90,7 +90,7 @@ CAMLprim value unix_util_write(value fd,value buf)
       vres=alloc(1,1); /* Ok result */
       Store_field(vres,0,Val_int(res));
     }
-  else 
+  else
     {
       vres=alloc(1,0); /* Bad result */
       Store_field(vres,0,Val_int(c2ml_unix_error(res))); /* TODO: EUNKNOWN x is a block */
@@ -148,12 +148,12 @@ CAMLprim value unix_util_statvfs (value pathv)
   enter_blocking_section();
   res = statvfs(path,&buf);
   leave_blocking_section();
-  if (res >=0) 
-    {   
+  if (res >=0)
+    {
       bufv = copy_statvfs (&buf);
       Store_field(vres,0,bufv);
     }
-  else 
+  else
     {
       Tag_val(vres)=0; /* Bad result */
       Store_field(vres,0,Val_int(c2ml_unix_error(res))); /* TODO: EUNKNOWN x is a block */

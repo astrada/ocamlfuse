@@ -4,16 +4,16 @@
   OCamlFuse is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation (version 2 of the License).
-  
+
   OCamlFuse is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
   along with OCamlFuse.  See the file LICENSE.  If you haven't received
   a copy of the GNU General Public License, write to:
-  
+
   Free Software Foundation, Inc.,
   59 Temple Place, Suite 330, Boston, MA
   02111-1307  USA
@@ -24,7 +24,7 @@
   vincenzo_ml@yahoo.it
 */
 quote(h,"#define FUSE_USE_VERSION 26")
-quote(h,"#include <fuse.h>") 
+quote(h,"#include <fuse.h>")
 
 
 typedef [abstract] void * fuse;
@@ -62,13 +62,13 @@ struct fuse_operation_names {
   [string,unique] char * setxattr;
   [string,unique] char * getxattr;
   [string,unique] char * listxattr;
-  [string,unique] char * removexattr; 
+  [string,unique] char * removexattr;
 };
 
 struct __fuse_context { /* TODO: what's the meaning of the private_data field? */
   [ptr] struct fuse *fuse;
   unsigned int uid;
-  unsigned int gid; 
+  unsigned int gid;
   unsigned int pid;
 };
 
@@ -87,4 +87,3 @@ void ml_fuse_init();
 void ml_fuse_main(int argc,[size_is(argc)] str argv[],[ptr] const struct fuse_operations *op);
 
 [blocking] boolean fuse_exited([ptr] struct fuse * f);
-
