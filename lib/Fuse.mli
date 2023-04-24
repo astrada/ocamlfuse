@@ -75,7 +75,5 @@ type operations = {
 }
 
 val op_names_of_operations : operations -> Fuse_bindings.fuse_operation_names
-
 val default_operations : operations
-
 val main : Fuse_bindings.str array -> operations -> unit

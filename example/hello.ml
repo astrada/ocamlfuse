@@ -4,9 +4,7 @@ open Bigarray
 open Fuse
 
 let default_stats = LargeFile.stat "."
-
 let fname = "hello"
-
 let name = "/" ^ fname
 
 let contents : Fuse.buffer =
@@ -39,7 +37,7 @@ let do_read path buf ofs _ =
       let ofs = Int64.to_int ofs in
       let len = min (Array1.dim contents - ofs) (Array1.dim buf) in
       Array1.blit (Array1.sub contents ofs len) (Array1.sub buf 0 len);
-      len )
+      len)
   else raise (Unix_error (ENOENT, "read", path))
 
 let _ =
