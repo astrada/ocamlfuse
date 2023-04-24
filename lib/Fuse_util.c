@@ -24,6 +24,12 @@
   vincenzo_ml@yahoo.it
 */
 
+#include <caml/version.h>
+
+#if OCAML_VERSION < 50000
+#define CAML_NAME_SPACE
+#endif
+
 #define UNKNOWN_ERR 127
 
 #include <caml/mlvalues.h>
@@ -36,6 +42,7 @@
 #include <caml/camlidlruntime.h>
 #include <caml/mlvalues.h>
 #include <caml/callback.h>
+#include <caml/threads.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -64,7 +71,7 @@ CAMLprim value callback4(value closure,value arg1,value arg2,value arg3,value ar
   args[1]=arg2;
   args[2]=arg3;
   args[3]=arg4;
-  CAMLreturn(callbackN(closure,4,args));
+  CAMLreturn(caml_callbackN(closure,4,args));
 }
 
 CAMLprim value c2ml_setxattr_flags(int flags)
@@ -355,14 +362,14 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define init_ARGS (struct fuse_conn_info *conn)
 #define init_CALL_ARGS (conn)
 #define init_RTYPE void *
-#define init_CB vres=callback(*init_closure,Val_unit);
+#define init_CB vres=caml_callback(*init_closure,Val_unit);
 /* TODO: the result from init is wrong, it should return unit */
 #define init_RES
 
 #define getattr_ARGS (const char* path, struct stat * buf)
 #define getattr_CALL_ARGS (path, buf)
 #define getattr_RTYPE int
-#define getattr_CB vpath = copy_string(path); vres=callback(*getattr_closure,vpath);
+#define getattr_CB vpath = caml_copy_string(path); vres=caml_callback(*getattr_closure,vpath);
 #define getattr_RES \
   ml2c_Unix_stats_struct_stat(Field(vres,0),buf);
 
@@ -370,7 +377,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define readdir_ARGS (const char * path, void * buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info * info)
 #define readdir_CALL_ARGS (path, buf, filler, offset, info)
 #define readdir_RTYPE int
-#define readdir_CB vpath = copy_string(path); vres=callback2(*readdir_closure,vpath,Val_int(info->fh));
+#define readdir_CB vpath = caml_copy_string(path); vres=caml_callback2(*readdir_closure,vpath,Val_int(info->fh));
 #define readdir_RES \
   vtmp=Field(vres,0);	    \
   while (Is_block(vtmp))    \
@@ -383,180 +390,180 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define mknod_ARGS (const char *path, mode_t mode, dev_t rdev)
 #define mknod_CALL_ARGS (path, mode, rdev)
 #define mknod_RTYPE int
-#define mknod_CB vpath = copy_string(path); vres=callback2(*mknod_closure,vpath,Val_int(mode));
+#define mknod_CB vpath = caml_copy_string(path); vres=caml_callback2(*mknod_closure,vpath,Val_int(mode));
 #define mknod_RES
 
 #define mkdir_ARGS (const char *path, mode_t mode)
 #define mkdir_CALL_ARGS (path, mode)
 #define mkdir_RTYPE int
-#define mkdir_CB vpath = copy_string(path); vres=callback2(*mkdir_closure,vpath,Val_int(mode));
+#define mkdir_CB vpath = caml_copy_string(path); vres=caml_callback2(*mkdir_closure,vpath,Val_int(mode));
 #define mkdir_RES
 
 #define unlink_ARGS (const char *path)
 #define unlink_CALL_ARGS (path)
 #define unlink_RTYPE int
-#define unlink_CB vpath = copy_string(path); vres=callback(*unlink_closure,vpath);
+#define unlink_CB vpath = caml_copy_string(path); vres=caml_callback(*unlink_closure,vpath);
 #define unlink_RES
 
 #define rmdir_ARGS (const char *path)
 #define rmdir_CALL_ARGS (path)
 #define rmdir_RTYPE int
-#define rmdir_CB vpath = copy_string(path); vres=callback(*rmdir_closure,vpath);
+#define rmdir_CB vpath = caml_copy_string(path); vres=caml_callback(*rmdir_closure,vpath);
 #define rmdir_RES
 
 #define readlink_ARGS (const char *path, char *buf, size_t size)
 #define readlink_CALL_ARGS (path, buf, size)
 #define readlink_RTYPE int
-#define readlink_CB vpath = copy_string(path); vres=callback(*readlink_closure,vpath);
+#define readlink_CB vpath = caml_copy_string(path); vres=caml_callback(*readlink_closure,vpath);
 #define readlink_RES strncpy(buf,String_val(Field(vres,0)),size-1);
 
 #define symlink_ARGS (const char *path, const char *dest)
 #define symlink_CALL_ARGS (path, dest)
 #define symlink_RTYPE int
 #define symlink_CB \
-     vpath = copy_string(path); \
-     vtmp = copy_string(dest); \
-     vres=callback2(*symlink_closure,vpath,vtmp);
+     vpath = caml_copy_string(path); \
+     vtmp = caml_copy_string(dest); \
+     vres=caml_callback2(*symlink_closure,vpath,vtmp);
 #define symlink_RES
 
 #define rename_ARGS (const char *path, const char *dest)
 #define rename_CALL_ARGS (path, dest)
 #define rename_RTYPE int
 #define rename_CB \
-     vpath = copy_string(path); \
-     vtmp = copy_string(dest); \
-     vres=callback2(*rename_closure,vpath,vtmp);
+     vpath = caml_copy_string(path); \
+     vtmp = caml_copy_string(dest); \
+     vres=caml_callback2(*rename_closure,vpath,vtmp);
 #define rename_RES
 
 #define link_ARGS (const char *path, const char *dest)
 #define link_CALL_ARGS (path, dest)
 #define link_RTYPE int
 #define link_CB  \
-     vpath = copy_string(path); \
-     vtmp = copy_string(dest); \
-     vres=callback2(*link_closure,vpath,vtmp);
+     vpath = caml_copy_string(path); \
+     vtmp = caml_copy_string(dest); \
+     vres=caml_callback2(*link_closure,vpath,vtmp);
 #define link_RES
 
 #define chmod_ARGS (const char *path, mode_t mode)
 #define chmod_CALL_ARGS (path, mode)
 #define chmod_RTYPE int
-#define chmod_CB vpath = copy_string(path); vres=callback2(*chmod_closure,vpath,Val_int(mode));
+#define chmod_CB vpath = caml_copy_string(path); vres=caml_callback2(*chmod_closure,vpath,Val_int(mode));
 #define chmod_RES
 
 #define chown_ARGS (const char *path, uid_t uid, gid_t gid)
 #define chown_CALL_ARGS (path, uid, gid)
 #define chown_RTYPE int
-#define chown_CB vpath = copy_string(path); vres=callback3(*chown_closure,vpath,Val_int(uid),Val_int(gid));
+#define chown_CB vpath = caml_copy_string(path); vres=caml_callback3(*chown_closure,vpath,Val_int(uid),Val_int(gid));
 #define chown_RES
 
 #define truncate_ARGS (const char *path, off_t size)
 #define truncate_CALL_ARGS (path, size)
 #define truncate_RTYPE int
-#define truncate_CB vpath = copy_string(path); vres=callback2(*truncate_closure,vpath,copy_int64(size));
+#define truncate_CB vpath = caml_copy_string(path); vres=caml_callback2(*truncate_closure,vpath,caml_copy_int64(size));
 #define truncate_RES
 
 #define utime_ARGS (const char *path, struct utimbuf *buf)
 #define utime_CALL_ARGS (path, buf)
 #define utime_RTYPE int
-#define utime_CB vpath = copy_string(path); vres=callback3(*utime_closure,vpath,copy_double(buf->actime),copy_double(buf->modtime));
+#define utime_CB vpath = caml_copy_string(path); vres=caml_callback3(*utime_closure,vpath,caml_copy_double(buf->actime),caml_copy_double(buf->modtime));
 #define utime_RES
 
 #define open_ARGS (const char *path, struct fuse_file_info *fi)
 #define open_CALL_ARGS (path, fi)
 #define open_RTYPE int
-#define open_CB vpath = copy_string(path); vres=callback2(*open_closure,vpath,c_flags_to_open_flag_list(fi->flags));
+#define open_CB vpath = caml_copy_string(path); vres=caml_callback2(*open_closure,vpath,c_flags_to_open_flag_list(fi->flags));
 #define open_RES if (Field(vres,0) != Val_int(0)) fi->fh = Int_val(Field(Field(vres,0),0));
 
 #define opendir_ARGS (const char *path, struct fuse_file_info *fi)
 #define opendir_CALL_ARGS (path, fi)
 #define opendir_RTYPE int
-#define opendir_CB vpath = copy_string(path); vres=callback2(*opendir_closure,vpath,c_flags_to_open_flag_list(fi->flags));
+#define opendir_CB vpath = caml_copy_string(path); vres=caml_callback2(*opendir_closure,vpath,c_flags_to_open_flag_list(fi->flags));
 #define opendir_RES if (Field(vres,0) != Val_int(0)) fi->fh = Int_val(Field(Field(vres,0),0));
 
 #define read_ARGS (const char *path, char *buf, size_t size, off_t offset,struct fuse_file_info * fi)
 #define read_CALL_ARGS (path, buf, size, offset,fi)
 #define read_RTYPE int
 #define read_CB \
-  vpath = copy_string(path); \
-  vres=callback4(*read_closure,vpath,alloc_bigarray_dims(BIGARRAY_UINT8|BIGARRAY_C_LAYOUT,1,buf,size),copy_int64(offset),Val_int(fi->fh));
+  vpath = caml_copy_string(path); \
+  vres=callback4(*read_closure,vpath,caml_ba_alloc_dims(CAML_BA_UINT8|CAML_BA_C_LAYOUT,1,buf,size),caml_copy_int64(offset),Val_int(fi->fh));
 #define read_RES res=Int_val(Field(vres,0));
 
 #define write_ARGS (const char *path, const char *buf, size_t size,off_t offset,struct fuse_file_info * fi) /* TODO: check usage of the writepages field of fi */
 #define write_CALL_ARGS (path, buf, size,offset,fi)
 #define write_RTYPE int
 #define write_CB \
-  vpath = copy_string(path); \
-  vres=callback4(*write_closure,vpath,alloc_bigarray_dims(BIGARRAY_UINT8|BIGARRAY_C_LAYOUT,1,(char *)buf,size),copy_int64(offset),Val_int(fi->fh));
+  vpath = caml_copy_string(path); \
+  vres=callback4(*write_closure,vpath,caml_ba_alloc_dims(CAML_BA_UINT8|CAML_BA_C_LAYOUT,1,(char *)buf,size),caml_copy_int64(offset),Val_int(fi->fh));
 #define write_RES res=Int_val(Field(vres,0));
 
 #define release_ARGS (const char *path, struct fuse_file_info * fi)
 #define release_CALL_ARGS (path, fi)
 #define release_RTYPE int
-#define release_CB vpath = copy_string(path); vres=callback3(*release_closure,vpath,c_flags_to_open_flag_list(fi->flags),Val_int(fi->fh));
+#define release_CB vpath = caml_copy_string(path); vres=caml_callback3(*release_closure,vpath,c_flags_to_open_flag_list(fi->flags),Val_int(fi->fh));
 #define release_RES
 
 #define releasedir_ARGS (const char *path, struct fuse_file_info * fi)
 #define releasedir_CALL_ARGS (path, fi)
 #define releasedir_RTYPE int
-#define releasedir_CB vpath = copy_string(path); vres=callback3(*releasedir_closure,vpath,c_flags_to_open_flag_list(fi->flags),Val_int(fi->fh));
+#define releasedir_CB vpath = caml_copy_string(path); vres=caml_callback3(*releasedir_closure,vpath,c_flags_to_open_flag_list(fi->flags),Val_int(fi->fh));
 #define releasedir_RES
 
 #define flush_ARGS (const char *path,struct fuse_file_info * fi)
 #define flush_CALL_ARGS (path, fi)
 #define flush_RTYPE int
-#define flush_CB vpath = copy_string(path); vres=callback2(*flush_closure,vpath,Val_int(fi->fh));
+#define flush_CB vpath = caml_copy_string(path); vres=caml_callback2(*flush_closure,vpath,Val_int(fi->fh));
 #define flush_RES
 
 #define statfs_ARGS (const char *path, struct statvfs *stbuf)
 #define statfs_CALL_ARGS (path, stbuf)
 #define statfs_RTYPE int
-#define statfs_CB vpath = copy_string(path); vres=callback(*statfs_closure,vpath);
+#define statfs_CB vpath = caml_copy_string(path); vres=caml_callback(*statfs_closure,vpath);
 #define statfs_RES ml2c_Unix_struct_statvfs(Field(vres,0),stbuf);
 
 #define fsync_ARGS (const char *path, int isdatasync,struct fuse_file_info * fi)
 #define fsync_CALL_ARGS (path, isdatasync, fi)
 #define fsync_RTYPE int
-#define fsync_CB vpath = copy_string(path); vres=callback3(*fsync_closure,vpath,Val_bool(isdatasync),Val_int(fi->fh));
+#define fsync_CB vpath = caml_copy_string(path); vres=caml_callback3(*fsync_closure,vpath,Val_bool(isdatasync),Val_int(fi->fh));
 #define fsync_RES
 
 #define fsyncdir_ARGS (const char *path, int isdatasync,struct fuse_file_info * fi)
 #define fsyncdir_CALL_ARGS (path, isdatasync, fi)
 #define fsyncdir_RTYPE int
-#define fsyncdir_CB vpath = copy_string(path); vres=callback3(*fsync_closure,vpath,Val_bool(isdatasync),Val_int(fi->fh));
+#define fsyncdir_CB vpath = caml_copy_string(path); vres=caml_callback3(*fsync_closure,vpath,Val_bool(isdatasync),Val_int(fi->fh));
 #define fsyncdir_RES
 
 #define setxattr_ARGS (const char *path, const char *name, const char *val,size_t size,int flags)
 #define setxattr_CALL_ARGS (path, name, val, size, flags)
 #define setxattr_RTYPE int
 #define setxattr_CB \
-    vpath = copy_string(path); \
-    vstring = alloc_string(size); \
+    vpath = caml_copy_string(path); \
+    vstring = caml_alloc_string(size); \
     memcpy(&Byte(String_val(vstring),0),val,size); \
-    vres=callback4(*setxattr_closure,vpath,copy_string(name),vstring,c2ml_setxattr_flags(flags));
+    vres=callback4(*setxattr_closure,vpath,caml_copy_string(name),vstring,c2ml_setxattr_flags(flags));
 #define setxattr_RES
 
 #define getxattr_ARGS (const char *path, const char *name, char *val,size_t size)
 #define getxattr_CALL_ARGS (path, name, val, size)
 #define getxattr_RTYPE int
 #define getxattr_CB \
-  vpath = copy_string(path); \
-  vres=callback2(*getxattr_closure,vpath,copy_string(name));
+  vpath = caml_copy_string(path); \
+  vres=caml_callback2(*getxattr_closure,vpath,caml_copy_string(name));
 #define getxattr_RES \
-     res=string_length(Field(vres,0)); \
+     res=caml_string_length(Field(vres,0)); \
      if (size > 0) \
-        if (string_length(Field(vres,0))>=size) \
+        if (caml_string_length(Field(vres,0))>=size) \
         { \
            res = -UNKNOWN_ERR; \
         } \
         else \
         { \
-	  memcpy(val,String_val(Field(vres,0)),string_length(Field(vres,0))); \
+	  memcpy(val,String_val(Field(vres,0)),caml_string_length(Field(vres,0))); \
         }
 
 #define listxattr_ARGS (const char *path, char *list, size_t size)
 #define listxattr_CALL_ARGS (path, list, size)
 #define listxattr_RTYPE int
-#define listxattr_CB vpath = copy_string(path); vres=callback(*listxattr_closure,vpath);
+#define listxattr_CB vpath = caml_copy_string(path); vres=caml_callback(*listxattr_closure,vpath);
 #define listxattr_RES \
      vtmp=Field(Field(vres,0),0);\
      int len; \
@@ -570,7 +577,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
      { \
         while (Is_block(vtmp)) \
         { \
-           len = string_length(Field(vtmp,0))+1; \
+           len = caml_string_length(Field(vtmp,0))+1; \
            if (rem>=len) \
            { \
               memcpy(dest,String_val(Field(vtmp,0)),len); \
@@ -590,7 +597,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define removexattr_ARGS (const char *path, const char *name)
 #define removexattr_CALL_ARGS (path, name)
 #define removexattr_RTYPE int
-#define removexattr_CB vpath = copy_string(path); vres=callback2(*removexattr_closure,vpath,copy_string(name));
+#define removexattr_CB vpath = caml_copy_string(path); vres=caml_callback2(*removexattr_closure,vpath,caml_copy_string(name));
 #define removexattr_RES
 
 #define CALLBACK(OPNAME) \
@@ -616,9 +623,9 @@ static OPNAME##_RTYPE gm281_ops_##OPNAME OPNAME##_ARGS \
 \
 static OPNAME##_RTYPE ops_##OPNAME OPNAME##_ARGS \
 { \
-  leave_blocking_section(); \
+  caml_release_runtime_system();                              \
     OPNAME##_RTYPE ret = gm281_ops_##OPNAME OPNAME##_CALL_ARGS; \
-  enter_blocking_section(); \
+  caml_acquire_runtime_system();                              \
     return ret; \
 }
 
@@ -654,7 +661,7 @@ int mainloop(struct fuse * f,int multithreaded)
   _fuse=caml_alloc(1, Abstract_tag);
   Store_field(_fuse, 0, (value) f);
 
-  CAMLreturnT(int, callback2(*ocaml_fuse_loop_closure,_fuse,Val_bool(multithreaded)));
+  CAMLreturnT(int, caml_callback2(*ocaml_fuse_loop_closure,_fuse,Val_bool(multithreaded)));
 }
 
 void ml_fuse_init()
@@ -685,4 +692,3 @@ value ocaml_fuse_is_null(value v) /* For Com.opaque values */
   CAMLparam1(v);
   CAMLreturn(Val_bool(0==Field(v,0))); // Is this the right way to check for null?
 }
-
