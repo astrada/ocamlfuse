@@ -2,39 +2,40 @@ ocamlfuse
 =========
 
 This repository is cloned from the last CVS snapshot of
-[OCamlFuse](http://sourceforge.net/projects/ocamlfuse/), with:
+[OCamlFuse](https://sourceforge.net/projects/ocamlfuse/), with:
 * Patches (see [#1](https://github.com/astrada/ocamlfuse/pull/1) and [#3](https://github.com/astrada/ocamlfuse/pull/3)) to make it compile on Mac OS X.
 * Fix for a race condition in multi-threaded mode (see [#4](https://github.com/astrada/ocamlfuse/issue/4)).
 * [dune](https://github.com/ocaml/dune) support (see [#12](https://github.com/astrada/ocamlfuse/pull/12)).
+* See all the merged [PR](https://github.com/astrada/ocamlfuse/pulls?q=is%3Apr+is%3Aclosed)
 
 INTRODUCTION
 
-This is a binding to fuse for the ocaml programming language, enabling
-you to write multithreaded filesystems in the ocaml language. It has
+This is a binding to `fuse` for the OCaml programming language, enabling
+you to write multithreaded filesystems with the OCaml language. It has
 been designed with simplicity as a goal, as you can see by looking at
-example/fusexmp.ml. Efficiency has also been a separate goal. The
-Bigarray library is used for read and writes, allowing the library to
-do zero-copy in ocaml land.
+`example/fusexmp.ml`. Efficiency has also been a separate goal. The
+`Bigarray` library is used for read and writes, allowing the library to
+do zero-copy in OCaml land.
 
 REQUIREMENTS
 
-You need fuse (version 2.7 or greater)
+You need `fuse` (version 2.7 or greater)
 
-http://www.sourceforge.net/projects/fuse
+https://www.sourceforge.net/projects/fuse
 
-You also need ocaml >= 4.02.3 and camlidl >= 1.05.
+You also need `OCaml >= 4.02.3` and `camlidl >= 1.05`.
 
 GETTING STARTED
 
-The reccomended way to install this library is using
-[OPAM](http://opam.ocaml.org/).
+The recommended way to install this library is with
+[opam](https://opam.ocaml.org/).
 
     opam install ocamlfuse
 
 
 INSTALLATION
 
-If you don't want to install OPAM, you need to manually install this
+If you don't want to install `opam`, you need to manually install this
 prerequisites:
 
 1) Prerequisites
@@ -49,9 +50,9 @@ prerequisites:
 
 - OCaml >= 4.02.3
 
-  Should be there in the major linux distributions, but is also available at
+  Should be in the major linux distributions, but is also available at
 
-  https://www.ocaml.org
+  https://ocaml.org
 
 - CamlIDL >= 1.05
 
@@ -59,7 +60,7 @@ prerequisites:
 
   https://github.com/xavierleroy/camlidl
 
-- dune >= 1.6
+- dune >= 3.7
 
   available at
 
@@ -73,7 +74,7 @@ prerequisites:
     make install
 
   This will install ocamlfuse in your ocaml library directory. To uninstall
-  it you can use "make uninstall"
+  it you can run `make uninstall`.
 
 TESTING
 
@@ -91,24 +92,24 @@ KNOWN PROBLEMS (if you can help, please do)
 
 - The stateful interface for readdir is not implemented
 
-- There is a stub in Fuse_util.c regarding st_blocks - if one
+- There is a stub in `Fuse_util.c` regarding `st_blocks` - if one
   implements statfs with a block size different
   than 512 "du" will not work on the filesystem.
 
 - many ocaml exceptions are reported as 127
 
-- we should add non-blocking lstat64 and statfs,*xattr implementations for
-  ocaml in Unix_util
+- we should add non-blocking `lstat64` and `statfs`, `*xattr` implementations
+  for ocaml in `Unix_util`
 
 - translation between ocaml unix errors and C unix error is dependent
   on the order of constructor names in ocaml. There should be a way to
   get error names from caml and create a translation table.
 
-- the Unix_util library uses unsafe coercions between unix file
+- the `Unix_util` library uses unsafe coercions between unix file
   handles (which are defined as ints) and ints. Even if this works, in
   the future it might stop working.
 
-- IMPORTANT: Unix_util.read and write operations have not been tested
+- IMPORTANT: `Unix_util.read` and `write` operations have not been tested
   in case of errors. Error code conversion might be incorrect but I
   don't have test cases (maybe the easy way is to modify fusexmp to
   return various errors).
@@ -119,7 +120,7 @@ KNOWN PROBLEMS (if you can help, please do)
 
 - Some errors are missing in the unix module (e.g. ENOTSUP,ENOATTR,
   see man lsxattr). We could solve all these problems with errors using
-  a custom error type instead of unix_error but this would create
+  a custom error type instead of `unix_error` but this would create
   troubles.
 
 - deadlock (and consequent necessity to kill -KILL the program) if
@@ -153,7 +154,7 @@ encouraged to post feedback there and in general to subscribe if you use ocamlfu
 
 The sourceforge page for ocamlfuse is
 
-http://sourceforge.net/projects/ocamlfuse
+https://sourceforge.net/projects/ocamlfuse
 
 Bye and have fun
 
