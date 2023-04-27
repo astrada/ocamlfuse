@@ -27,7 +27,7 @@ let () =
         | Some pkgc -> (
             match C.Pkg_config.query pkgc ~package:"fuse" with
             | Some flags -> flags
-            | None -> default )
+            | None -> default)
         | None -> default
       in
       let calmidl_fname = "camlidl.libs.sexp" in
@@ -43,7 +43,7 @@ let () =
                 (Printf.sprintf "ocamlfind query camlidl > %s" calmidl_fname)
             with
             | 0 -> String.trim (read_file calmidl_fname)
-            | _ -> C.die "Could not query camlidl lib path" )
+            | _ -> C.die "Could not query camlidl lib path")
       in
       let camlidl_libs = [ "-L" ^ camlidl_lib_path; "-lcamlidl" ] in
       C.Flags.(

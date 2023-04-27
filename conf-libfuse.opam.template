@@ -1,0 +1,12 @@
+build: ["pkg-config" "--exists" "fuse"]
+depexts: [
+  ["libfuse-dev"] {os-family = "debian"}
+  ["fuse-dev"] {os-distribution = "alpine"}
+  ["fuse-devel"] {os-distribution = "centos"}
+  ["fuse-devel"] {os-distribution = "fedora"}
+  ["fuse-devel"] {os-distribution = "ol"}
+  ["fuse-devel"] {os-family = "suse"}
+  ["fuse2"] {os-family = "arch"}
+  ["macfuse"] {os = "macos" & os-distribution = "homebrew"}
+]
+flags: conf

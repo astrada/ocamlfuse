@@ -62,7 +62,7 @@ prerequisites:
 - dune >= 1.6
 
   available at
-  
+
   https://dune.build/
 
 2) Installing OCamlFuse
