@@ -623,9 +623,9 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
                                                                         \
   static OPNAME##_RTYPE ops_##OPNAME OPNAME##_ARGS                      \
   {                                                                     \
-    caml_leave_blocking_section();                                      \
+    caml_acquire_runtime_system();                                      \
     OPNAME##_RTYPE ret = gm281_ops_##OPNAME OPNAME##_CALL_ARGS;         \
-    caml_enter_blocking_section();                                      \
+    caml_release_runtime_system();                                      \
     return ret;                                                         \
   }
 

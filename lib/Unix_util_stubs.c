@@ -64,9 +64,9 @@ CAMLprim value unix_util_read(value fd,value buf)
   void * c_data = Caml_ba_data_val(buf);
   int c_dim = Caml_ba_array_val(buf)->dim[0];
 
-  caml_enter_blocking_section();
+  caml_release_runtime_system();
   res = read(c_fd, c_data, c_dim);
-  caml_leave_blocking_section();
+  caml_acquire_runtime_system();
   if (res >=0)
     {
       vres=caml_alloc(1,1); /* Ok result */
@@ -89,9 +89,9 @@ CAMLprim value unix_util_write(value fd,value buf)
   void * c_data = Caml_ba_data_val(buf);
   int c_dim = Caml_ba_array_val(buf)->dim[0];
 
-  caml_enter_blocking_section();
+  caml_release_runtime_system();
   res = write(c_fd, c_data, c_dim);
-  caml_leave_blocking_section();
+  caml_acquire_runtime_system();
   if (res >=0)
     {
       vres=caml_alloc(1,1); /* Ok result */
@@ -152,9 +152,9 @@ CAMLprim value unix_util_statvfs (value pathv)
   const char *path = String_val (pathv);
   struct statvfs buf;
   int res;
-  caml_enter_blocking_section();
+  caml_release_runtime_system();
   res = statvfs(path,&buf);
-  caml_leave_blocking_section();
+  caml_acquire_runtime_system();
   if (res >=0)
     {
       bufv = copy_statvfs (&buf);
