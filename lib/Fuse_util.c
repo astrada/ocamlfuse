@@ -32,6 +32,7 @@
 
 #define UNKNOWN_ERR 127
 
+
 #include <caml/mlvalues.h>
 #include <caml/memory.h>
 #include <caml/alloc.h>
@@ -43,11 +44,6 @@
 #include <caml/mlvalues.h>
 #include <caml/callback.h>
 #include <caml/threads.h>
-
-#if OCAML_VERSION >= 50000
-CAMLextern void caml_reset_domain_lock(void);
-CAMLextern void caml_acquire_domain_lock(void);
-#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -67,6 +63,12 @@ CAMLextern void caml_acquire_domain_lock(void);
 #include "Fuse_bindings.h"
 
 #define min(a,b) (a<b?a:b)
+
+#if OCAML_VERSION >= 50000
+/* HACK: Internal hook to call after fork()
+ * https://github.com/ocaml/ocaml/blob/5.1/runtime/caml/domain.h#L81 */
+CAMLextern void (*caml_atfork_hook)(void);
+#endif
 
 CAMLprim value callback4(value closure,value arg1,value arg2,value arg3,value arg4)
 {
@@ -686,8 +688,7 @@ void ml_fuse_main(int argc,str * argv,struct fuse_operations const * op)
   struct fuse * fuse = fuse_setup(argc,argv,op,sizeof(struct fuse_operations),&mountpoint,&multithreaded,&fd);
 
 #if OCAML_VERSION >= 50000
-  caml_reset_domain_lock();
-  caml_acquire_domain_lock();
+  if (caml_atfork_hook != NULL) caml_atfork_hook();
 #endif
 
   if (fuse!=NULL)
