@@ -44,6 +44,11 @@
 #include <caml/callback.h>
 #include <caml/threads.h>
 
+#if OCAML_VERSION >= 50000
+CAMLextern void caml_reset_domain_lock(void);
+CAMLextern void caml_acquire_domain_lock(void);
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -679,6 +684,11 @@ void ml_fuse_main(int argc,str * argv,struct fuse_operations const * op)
   int fd;
 
   struct fuse * fuse = fuse_setup(argc,argv,op,sizeof(struct fuse_operations),&mountpoint,&multithreaded,&fd);
+
+#if OCAML_VERSION >= 50000
+  caml_reset_domain_lock();
+  caml_acquire_domain_lock();
+#endif
 
   if (fuse!=NULL)
     {
