@@ -120,8 +120,22 @@ CAMLprim value unix_util_file_descr_of_int(value fd)
 CAMLprim value unix_util_fchdir(value fd)
 {
   CAMLparam1(fd);
-  fchdir(Int_val(fd));
-  CAMLreturn (Val_unit);
+  CAMLlocal1(vres);
+  int res;
+  caml_release_runtime_system();
+  res = fchdir(Int_val(fd));
+  caml_acquire_runtime_system();
+  if (res >=0)
+    {
+      vres=caml_alloc(1,1); /* Ok result */
+      Store_field(vres,0,Val_unit);
+    }
+  else
+    {
+      vres=caml_alloc(1,0); /* Bad result */
+      Store_field(vres,0,Val_int(errno)); /* TODO: EUNKNOWN x is a block */
+    }
+  CAMLreturn (vres);
 }
 
 CAMLprim value copy_statvfs (struct statvfs *buf)
