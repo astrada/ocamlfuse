@@ -61,12 +61,6 @@
 
 #define min(a, b) (a < b ? a : b)
 
-#if OCAML_VERSION >= 50000
-/* HACK: Internal hook to call after fork()
- * https://github.com/ocaml/ocaml/blob/5.1/runtime/caml/domain.h#L81 */
-CAMLextern void (*caml_atfork_hook)(void);
-#endif
-
 CAMLprim value callback4(value closure, value arg1, value arg2, value arg3,
                          value arg4) {
   CAMLparam5(closure, arg1, arg2, arg3, arg4);
@@ -729,11 +723,6 @@ void ml_fuse_main(int argc, str *argv, struct fuse_operations const *op) {
 
   struct fuse *fuse = fuse_setup(argc, argv, op, sizeof(struct fuse_operations),
                                  &mountpoint, &multithreaded, &fd);
-
-#if OCAML_VERSION >= 50000
-  if (caml_atfork_hook != NULL)
-    caml_atfork_hook();
-#endif
 
   if (fuse != NULL) {
     mainloop(fuse, multithreaded);
