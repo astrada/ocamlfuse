@@ -72,7 +72,12 @@ let statvfs path =
   | Ok res -> res
   | Bad err -> raise (Unix.Unix_error (err, "statvfs", ""))
 
-external fchdir : Unix.file_descr -> unit = "unix_util_fchdir"
+external fchdir_noexn : Unix.file_descr -> unit result = "unix_util_fchdir"
+
+let fchdir path =
+  match fchdir_noexn path with
+  | Ok () -> ()
+  | Bad err -> raise (Unix.Unix_error (err, "fchdir", ""))
 
 let read fd buf =
   match read_noexn fd buf with
@@ -82,4 +87,4 @@ let read fd buf =
 let write fd buf =
   match write_noexn fd buf with
   | Ok res -> res
-  | Bad err -> raise (Unix.Unix_error (err, "read", ""))
+  | Bad err -> raise (Unix.Unix_error (err, "write", ""))
