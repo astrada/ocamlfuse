@@ -134,6 +134,7 @@ char **insert_foreground_option(int argc, char **argv) {
   for (int i = 1; i < argc; ++i) {
     new_argv[i + 1] = strdup(argv[i]);
   }
+  new_argv[argc + 1] = NULL;
   return new_argv;
 }
 
