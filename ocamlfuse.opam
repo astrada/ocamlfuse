@@ -43,4 +43,5 @@ build: [
 ]
 dev-repo: "git+https://github.com/astrada/ocamlfuse.git"
 homepage: "http://sourceforge.net/apps/mediawiki/ocamlfuse"
+available: [ os != "oraclelinux-9" & os != "freebsd" ]
 x-ci-accept-failures: ["oraclelinux-7"]
