@@ -345,7 +345,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 
 #define init_ARGS (struct fuse_conn_info * conn)
 #define init_CALL_ARGS (conn)
-#define init_RTYPE void *
+#define init_RTYPE int
 #define init_CB vres = caml_callback(*init_closure, Val_unit);
 /* TODO: the result from init is wrong, it should return unit */
 #define init_RES
