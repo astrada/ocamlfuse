@@ -64,9 +64,9 @@ int main_ocaml4(int argc, char **argv);
 /* https://v2.ocaml.org/releases/5.1/htmlman/intfc.html#ss:main-c */
 int main(int argc, char **argv) {
 #if OCAML_VERSION < 50000
-  main_ocaml4(argc, argv);
+  return main_ocaml4(argc, argv);
 #else
-  main_ocaml5(argc, argv);
+  return main_ocaml5(argc, argv);
 #endif
 }
 
@@ -92,7 +92,10 @@ int main_ocaml5(int argc, char **argv) {
   return 1;
 }
 
-int main_ocaml4(int argc, char **argv) { caml_main(argv); }
+int main_ocaml4(int argc, char **argv) {
+  caml_main(argv);
+  return 1;
+}
 
 void parse_fuse_args(int argc, char **argv, struct fuse_args *args,
                      bool *debug) {
