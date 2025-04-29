@@ -101,6 +101,7 @@ void parse_fuse_args(int argc, char **argv, struct fuse_args *args,
                      bool *debug) {
   int i = 1;
 
+  *debug = false;
   fuse_opt_add_arg(args, argv[0]);
   while (i < argc) {
     if (is_fuse_arg(argv[i], argv[i - 1], i == argc - 1)) {
