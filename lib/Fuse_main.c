@@ -94,7 +94,7 @@ int main_ocaml5(int argc, char **argv) {
 
 int main_ocaml4(int argc, char **argv) {
   caml_main(argv);
-  return 1;
+  return 0;
 }
 
 void parse_fuse_args(int argc, char **argv, struct fuse_args *args,
