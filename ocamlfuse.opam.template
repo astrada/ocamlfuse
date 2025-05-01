@@ -1,4 +1,3 @@
 homepage: "http://sourceforge.net/apps/mediawiki/ocamlfuse"
-available: [ os != "oraclelinux-9" & os != "freebsd" ]
-x-ci-accept-failures: ["oraclelinux-7"]
+available: [ os != "win32" & os != "macos" & os != "freebsd" ]
 x-maintenance-intent: ["(latest)"]
