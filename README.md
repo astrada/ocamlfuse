@@ -6,7 +6,22 @@ This repository is cloned from the last CVS snapshot of
 * Patches (see [#1](https://github.com/astrada/ocamlfuse/pull/1) and [#3](https://github.com/astrada/ocamlfuse/pull/3)) to make it compile on Mac OS X.
 * Fix for a race condition in multi-threaded mode (see [#4](https://github.com/astrada/ocamlfuse/issue/4)).
 * [dune](https://github.com/ocaml/dune) support (see [#12](https://github.com/astrada/ocamlfuse/pull/12)).
-* See all the merged [PR](https://github.com/astrada/ocamlfuse/pulls?q=is%3Apr+is%3Aclosed)
+* See all the merged [PRs](https://github.com/astrada/ocamlfuse/pulls?q=is%3Apr+is%3Aclosed)
+
+### Breaking Changes
+
+* Since v2.7.2, if compiled with OCaml version 5 or later, the FUSE process is
+  started always in foreground mode (the `-f` option is always injected). In
+  fact, the new Multicore runtime prohibits calling a `fork()` from C after
+  `caml_main()` is called. So, we can't let FUSE call `fuse_daemonize()`
+  before `caml_main()`. To avoid flawed heuristics to decide when to call
+  `fuse_daemonize()`, and usability problems (option parsing goes after
+  `fork`, so we loose diagnostics, if the options are wrong), the simplest
+  solution is to always keep the process in foreground. If you need to run the
+  process in background, remember to append `&` to the command line or run the
+  process in a `systemd` service.
+
+The original README starts here:
 
 INTRODUCTION
 
