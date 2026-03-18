@@ -5,7 +5,7 @@
  (flags -thread)
  (foreign_stubs
   (language c)
-  (names Fuse_bindings_stubs Fuse_util Unix_util_stubs Fuse_main)
+  (names Fuse_bindings_stubs Fuse_util Unix_util_stubs)
   (flags
    :standard
    (:include fuse.cflags.sexp)))
