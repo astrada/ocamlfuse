@@ -77,6 +77,8 @@ incompatibilities handled by the later milestones.
 
 ## M2: FUSE 3 Lifecycle Skeleton
 
+Status: planned; M2-specific decisions accepted. See `m2-plan.md`.
+
 Replace the libfuse 2 command-loop integration with a supported FUSE 3
 lifecycle.
 
@@ -85,21 +87,31 @@ Tasks:
 - Remove or replace `fuse_cmd`, `fuse_read_cmd`, `fuse_process_cmd`, and
   `fuse_exited` from `lib/Fuse_bindings.idl` and `lib/Fuse_util.c`.
 - Set `FUSE_USE_VERSION` to `30`.
-- Decide whether `ml_fuse_main` calls `fuse_main` or manually performs create,
-  mount, loop, unmount, and destroy steps.
-- Preserve OCaml 5 foreground behavior.
-- Release the OCaml runtime while the FUSE loop blocks.
+- Replace `ml_fuse_main` with a manual high-level lifecycle using
+  `fuse_parse_cmdline`, `fuse_new`, `fuse_mount`, `fuse_daemonize`,
+  `fuse_get_session`, `fuse_set_signal_handlers`, `fuse_loop`,
+  `fuse_remove_signal_handlers`, `fuse_unmount`, and `fuse_destroy`.
+- Force foreground and single-threaded behavior.
+- Release the OCaml runtime while `fuse_loop` blocks.
 - Keep callback wrappers responsible for acquiring the OCaml runtime before
   calling OCaml.
+- Add temporary FUSE 3 callback ABI shims needed for compilation, while leaving
+  final public API semantics to M3.
+- Preserve the public `Fuse.main` return type while reporting setup failures
+  with clear exceptions.
 
 Exit criteria:
 
-- The library compiles far enough to instantiate a FUSE 3 operations table.
+- `dune build @install` passes against libfuse 3.
 - Mount setup and teardown errors are reported clearly.
+- Public FUSE-3-shaped `Fuse.operations` and `Fuse_compat` remain explicitly
+  deferred to M3.
 
 Verification:
 
 ```sh
+tools/format_ocaml lib/Fuse.ml lib/Fuse.mli lib/Fuse_lib.ml
+tools/format_c lib/Fuse_util.c lib/Unix_util_stubs.c
 dune build @install
 ```
 
@@ -186,3 +198,37 @@ rg -n "libfuse 2|FUSE_USE_VERSION 26|pkg-config fuse|fuse_setup|fuse_cmd" README
 ```
 
 Any remaining matches must be intentional historical references or comments.
+
+## M6: Multithreaded Loop Analysis
+
+Analyze whether and how `ocamlfuse3` should support a multithreaded libfuse
+event loop after the initial FUSE 3 lifecycle port is working.
+
+Tasks:
+
+- Compare libfuse 3.10 API-level `fuse_loop_mt(f, clone_fd)` with newer
+  `fuse_loop_mt(f, config)` shapes, keeping the Jammy/libfuse 3.10 support
+  constraint in mind.
+- Determine whether FUSE-created worker threads must call
+  `caml_c_thread_register` before acquiring the OCaml runtime.
+- Decide how callbacks, `Thread_pool`, and OCaml domains interact if libfuse
+  dispatches requests concurrently.
+- Define user-facing controls for single-threaded versus multithreaded mode,
+  if multithreading is supported.
+- Update the e2e plan with at least one concurrency-oriented smoke test if
+  multithreaded mode is implemented.
+
+Exit criteria:
+
+- A documented decision exists for whether `ocamlfuse3` supports
+  multithreaded libfuse loops.
+- If supported, the required C/OCaml runtime registration and cleanup model is
+  specified before implementation.
+- If not supported, the documentation explains that the FUSE 3 binding runs
+  the high-level loop in single-threaded mode.
+
+Verification:
+
+```sh
+rg -n "fuse_loop_mt|caml_c_thread_register|Thread_pool|single-thread|multithread" lib docs
+```

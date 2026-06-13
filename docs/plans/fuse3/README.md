@@ -6,6 +6,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 - `m0-checks.md`: completed M0 decision and environment checkpoint.
 - `m1-plan.md`: detailed plan and accepted decisions for package/discovery
   changes.
+- `m2-plan.md`: detailed plan and accepted decisions for the FUSE 3 lifecycle
+  skeleton.
 - `api-delta.md`: known callback and lifecycle differences that affect the
   current binding.
 - `public-api-proposal.md`: proposed OCaml representations for FUSE 3-specific
@@ -14,8 +16,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0 and M1 are complete. Build and package discovery now target libfuse 3;
-callback and lifecycle porting starts in M2.
+M0 and M1 are complete. M2 lifecycle decisions are accepted. Multithreaded loop
+support is deferred to M6 analysis.
 
 ## Primary References
 

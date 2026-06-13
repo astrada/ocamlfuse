@@ -41,15 +41,15 @@ The migration target is `FUSE_USE_VERSION 30` to support libfuse `3.10` on
 Ubuntu Jammy and avoid dependencies on later FUSE API levels. The first version
 should therefore avoid the FUSE 3.12+ `fuse_loop_mt(f, config)` API.
 
-The lifecycle design must answer:
+The M2 lifecycle plan answers the initial lifecycle design in
+`m2-plan.md`. The main design points are:
 
-- whether `ml_fuse_main` calls `fuse_main` or manually creates, mounts, loops,
-  unmounts, and destroys a `struct fuse`;
-- how foreground mode is enforced for OCaml 5;
-- where the OCaml runtime is released while waiting in the FUSE loop;
-- how multithreaded mode is handled, if it remains supported;
-- if multithreaded mode remains supported, how to use the pre-3.12
-  `fuse_loop_mt(f, clone_fd)` shape while targeting API `30`.
+- use a manual high-level lifecycle instead of `fuse_main`;
+- force foreground operation for OCaml runtime safety;
+- run single-threaded with `fuse_loop`;
+- release the OCaml runtime while waiting in `fuse_loop`;
+- keep callback wrappers responsible for acquiring the OCaml runtime before
+  calling OCaml.
 
 ## Callback Delta
 
