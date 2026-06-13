@@ -196,6 +196,8 @@ OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test
 
 ## M5: Documentation And Release Preparation
 
+Status: planned; M5-specific decisions closed. See `m5-plan.md`.
+
 Update user and agent documentation to describe the completed FUSE 3 binding.
 
 Tasks:
@@ -204,7 +206,8 @@ Tasks:
 - Update `docs/bindings.md` from libfuse 2 to libfuse 3.
 - Update `AGENTS.md` project summary and binding workflow.
 - Update package synopsis or descriptions if package names change.
-- Archive this plan after implementation is complete.
+- Add release notes for the FUSE 3 migration.
+- Keep the FUSE 3 planning directory active until M6 is complete.
 
 Exit criteria:
 
@@ -215,10 +218,14 @@ Exit criteria:
 Verification:
 
 ```sh
-rg -n "libfuse 2|FUSE_USE_VERSION 26|pkg-config fuse|fuse_setup|fuse_cmd" README.md docs AGENTS.md lib
+rg -n \
+  "libfuse 2|FUSE_USE_VERSION 26|pkg-config fuse([^3[:alnum:]_.-]|$)|fuse_setup|fuse_teardown|fuse_read_cmd|fuse_process_cmd|multithreaded filesystems|opam install ocamlfuse([^3[:alnum:]_-]|$)|libfuse-dev" \
+  README.md docs/README.md docs/bindings.md docs/release-notes.md AGENTS.md dune-project ocamlfuse3.opam.template ocamlfuse3.opam
 ```
 
-Any remaining matches must be intentional historical references or comments.
+Expected result: no matches in active documentation or package descriptions.
+Historical references may remain in migration plans and archived plans when
+explicitly identified as historical context.
 
 ## M6: Multithreaded Loop Analysis
 
