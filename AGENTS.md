@@ -21,12 +21,14 @@ sources instead.
 - Run the full end-to-end suite: `make e2e` or `test/e2e/run.sh full`.
 - Format tracked OCaml sources: `tools/format_ocaml`.
 - Format selected OCaml sources: `tools/format_ocaml path/to/file.ml
-  path/to/file.mli`.
+path/to/file.mli`.
 - Format tracked C sources: `tools/format_c`.
 - Format selected C sources: `tools/format_c path/to/file.c path/to/file.h`.
 - Clean build artifacts: `dune clean` or `make clean`.
 
 For non-documentation code changes, run `dune build @install` and `make test`.
+Run build and test **sequentially** because `dune` uses a lock file that prevents
+running more than one `dune` command in parallel.
 For public API or example changes, also run the example build. `make test`
 builds the e2e test binaries, then runs the smoke test when FUSE is available.
 If FUSE is unavailable, it prints `SKIP` and exits successfully. Set
