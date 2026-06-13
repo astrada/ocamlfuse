@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+repo_root=$(cd "$script_dir/.." && pwd)
+invocation_dir=$PWD
+
+if ! command -v clang-format >/dev/null 2>&1; then
+  echo "clang-format is not installed or not in PATH" >&2
+  exit 1
+fi
+
+cd "$repo_root"
+
+if [ "$#" -eq 0 ]; then
+  mapfile -d '' files < <(git ls-files -z -- '*.c' '*.h')
+else
+  files=()
+
+  for file in "$@"; do
+    case "$file" in
+      *.c | *.h)
+        if [ -f "$file" ]; then
+          files+=("$file")
+        elif [ -f "$invocation_dir/$file" ]; then
+          files+=("$invocation_dir/$file")
+        else
+          echo "C source file not found: $file" >&2
+          exit 1
+        fi
+        ;;
+    esac
+  done
+fi
+
+if [ "${#files[@]}" -eq 0 ]; then
+  if [ "$#" -eq 0 ]; then
+    echo "No tracked .c or .h files found"
+  else
+    echo "No .c or .h files provided"
+  fi
+  exit 0
+fi
+
+clang-format -i "${files[@]}"
+
+echo "Formatted ${#files[@]} C source files"

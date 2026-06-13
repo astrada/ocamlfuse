@@ -26,4 +26,7 @@ e2e:
 format:
 	tools/format_ocaml $(FILES)
 
-.PHONY: build install uninstall clean example test e2e format
+format-c:
+	tools/format_c $(FILES)
+
+.PHONY: build install uninstall clean example test e2e format format-c

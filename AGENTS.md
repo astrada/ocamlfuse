@@ -22,6 +22,8 @@ sources instead.
 - Format tracked OCaml sources: `tools/format_ocaml`.
 - Format selected OCaml sources: `tools/format_ocaml path/to/file.ml
   path/to/file.mli`.
+- Format tracked C sources: `tools/format_c`.
+- Format selected C sources: `tools/format_c path/to/file.c path/to/file.h`.
 - Clean build artifacts: `dune clean` or `make clean`.
 
 For non-documentation code changes, run `dune build @install` and `make test`.
@@ -56,6 +58,8 @@ equivalent.
   provides Linux xattr helpers, and `run.sh` mounts, tests, and cleans up.
 - `tools/format_ocaml`: repository formatter wrapper for `.ml` and `.mli`
   files. It requires `ocamlformat` in `PATH`.
+- `tools/format_c`: repository formatter wrapper for `.c` and `.h` files. It
+  requires `clang-format` in `PATH`.
 - `docs/`: agent-oriented project documentation. Start with
   `docs/README.md`.
 
@@ -101,7 +105,8 @@ generally raise `Unix.Unix_error`, `Fuse_lib` converts them to
 - Keep edits focused and avoid unrelated reformatting.
 - Run `tools/format_ocaml` after editing OCaml source files. Pass explicit
   `.ml` or `.mli` paths when only touched files should be formatted.
-- Follow the existing C formatting style for C sources.
+- Run `tools/format_c` after editing C source or header files. Pass explicit
+  `.c` or `.h` paths when only touched files should be formatted.
 - Preserve the GPL license header when adding source files that are part of the
   library implementation.
 - Documentation files should be plain Markdown and should prefer concrete
