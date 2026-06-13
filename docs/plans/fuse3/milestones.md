@@ -37,14 +37,14 @@ Expected locally:
 
 ## M1: Build And Package Discovery
 
-Status: planned; M1-specific decisions accepted. See `m1-plan.md`.
+Status: complete. See `m1-plan.md`.
 
 Update build discovery and package metadata without changing runtime behavior.
 
 Tasks:
 
 - Update `lib/config/discover.ml` to query `pkg-config fuse3`.
-- Update fallback flags to libfuse 3 specific values.
+- Remove fallback flags that could silently use libfuse 2.
 - Rename the Dune/opam package from `ocamlfuse` to `ocamlfuse3`.
 - Rename the local conf package from `conf-libfuse` to `conf-libfuse3`.
 - Rename generated libfuse flag files to `fuse3.cflags.sexp` and

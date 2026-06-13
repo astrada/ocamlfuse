@@ -1,6 +1,6 @@
 (library
  (name fuse)
- (public_name ocamlfuse)
+ (public_name ocamlfuse3)
  (libraries unix threads bigarray camlidl)
  (flags -thread)
  (foreign_stubs
@@ -8,14 +8,14 @@
   (names Fuse_bindings_stubs Fuse_util Unix_util_stubs)
   (flags
    :standard
-   (:include fuse.cflags.sexp)))
+   (:include fuse3.cflags.sexp)))
  (c_library_flags
   :standard
-  ((:include fuse.libs.sexp)
+  ((:include fuse3.libs.sexp)
    (:include camlidl.libs.sexp))))
 
 (rule
- (targets fuse.libs.sexp fuse.cflags.sexp camlidl.libs.sexp)
+ (targets fuse3.libs.sexp fuse3.cflags.sexp camlidl.libs.sexp)
  (deps
   (:discover config/discover.exe))
  (action

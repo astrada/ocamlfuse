@@ -11,9 +11,9 @@
 (license "GPL-1.0-or-later")
 
 (package
- (name conf-libfuse)
- (synopsis "Virtual package relying on FUSE")
- (description "This package can only install if the fuse library is installed on the system.")
+ (name conf-libfuse3)
+ (synopsis "Virtual package relying on FUSE 3")
+ (description "This package can only install if the fuse3 library is installed on the system.")
  (maintainers "https://github.com/ocaml/opam-repository/issues")
  (authors "Multiple")
  (homepage "https://github.com/libfuse/libfuse")
@@ -24,8 +24,8 @@
   ("conf-pkg-config" :build)))
 
 (package
- (name ocamlfuse)
- (synopsis "OCaml bindings for FUSE (Filesystem in UserSpacE)")
+ (name ocamlfuse3)
+ (synopsis "OCaml bindings for FUSE 3 (Filesystem in UserSpacE)")
  (description "\
 This is a binding to FUSE for the OCaml programming language, enabling
 you to write multithreaded filesystems in the OCaml language. It has
@@ -40,5 +40,5 @@ do zero-copy in OCaml land.")
   base-unix
   camlidl
   dune-configurator
-  conf-libfuse
+  conf-libfuse3
   ("ounit2" :with-test)))

@@ -1,6 +1,6 @@
 # M1 Plan: Build And Package Discovery
 
-Status: planned; M1-specific decisions accepted.
+Status: complete.
 
 Depends on M0, which is complete.
 
@@ -86,7 +86,7 @@ Use these initial depexts for `conf-libfuse3`:
 
 ```opam
 depexts: [
-  ["libfuse3-dev"] {os-family = "debian" | os-family = "ubuntu"}
+  ["libfuse3-dev"] {os-family = "debian" | os-distribution = "ubuntu"}
   ["fuse3-dev"] {os-distribution = "alpine"}
   ["fuse3-devel"] {os-distribution = "centos"}
   ["fuse3-devel"] {os-family = "fedora"}
@@ -117,11 +117,11 @@ Build generated FUSE 3 flag files:
 dune build lib/fuse3.cflags.sexp lib/fuse3.libs.sexp
 ```
 
-Then check that current package/discovery names no longer appear in active build
-metadata:
+Then check that libfuse 2 package/discovery names no longer appear in active
+build metadata:
 
 ```sh
-rg -n "conf-libfuse|pkg-config fuse|public_name ocamlfuse|libraries ocamlfuse" \
+rg -n "conf-libfuse([^3[:alnum:]_-]|$)|pkg-config fuse([^3[:alnum:]_.-]|$)|public_name ocamlfuse\)|libraries ocamlfuse([ )]|$)" \
   dune-project lib example test *.opam *.opam.template
 ```
 
@@ -131,3 +131,11 @@ package names or `pkg-config fuse`.
 `dune build @install` is not an M1-only exit criterion unless M1 is bundled with
 M2/M3, because switching to libfuse 3 discovery exposes FUSE 3 C API
 incompatibilities that are intentionally handled later.
+
+## Verification Result
+
+The M1 targeted checks pass locally with libfuse `3.14.0`.
+
+`dune build @install` reaches the expected FUSE 3 API incompatibilities for
+later milestones, including `FUSE_USE_VERSION` below `30`, removed `utime`,
+changed callback signatures, and removed `fuse_setup`/`fuse_teardown`.

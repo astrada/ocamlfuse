@@ -4,9 +4,16 @@ Scope: this file applies to the whole repository.
 
 ## Project
 
-This repository builds `ocamlfuse`, OCaml bindings for libfuse 2
-(`FUSE_USE_VERSION 26`). The public opam package and public Dune library are
-named `ocamlfuse`; the internal Dune library name is `fuse`.
+This repository is migrating `ocamlfuse` from libfuse 2 to libfuse 3. The build
+and package metadata already target libfuse 3. The public opam package and
+public Dune library are named `ocamlfuse3`; the local conf package is
+`conf-libfuse3`; the internal Dune library name remains `fuse`.
+
+The callback and lifecycle implementation is still mid-migration:
+`lib/Fuse_bindings.idl` defines `FUSE_USE_VERSION 26`, and the hand-written C
+glue still contains libfuse 2 lifecycle and callback shapes. Until the FUSE 3
+port reaches M2/M3 in `docs/plans/fuse3/`, `dune build @install` is expected to
+reach FUSE 3 C API incompatibilities rather than pass.
 
 The binding layer is generated with camlidl and completed by hand-written OCaml
 and C glue. Treat the generated binding files as build artifacts and edit their
@@ -15,6 +22,11 @@ sources instead.
 ## Common Commands
 
 - Build the library and install metadata: `dune build @install` or `make`.
+  During the in-progress FUSE 3 migration, this is expected to fail at the
+  callback/lifecycle porting boundary until M2/M3 are implemented.
+- Run the M1 FUSE 3 discovery checks:
+  `dune build conf-libfuse3.opam ocamlfuse3.opam` and
+  `dune build lib/fuse3.cflags.sexp lib/fuse3.libs.sexp`.
 - Build the examples: `dune build example/hello.exe example/fusexmp.exe` or
   `make example`.
 - Run the smoke test: `make test`.
@@ -34,7 +46,7 @@ builds the e2e test binaries, then runs the smoke test when FUSE is available.
 If FUSE is unavailable, it prints `SKIP` and exits successfully. Set
 `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a failure.
 
-Running the examples mounts FUSE filesystems and requires a working libfuse 2
+Running the examples mounts FUSE filesystems and requires a working libfuse
 runtime, `/dev/fuse` access, and mount permissions. Do not assume those are
 available in sandboxes or CI. If you run an example manually, use a temporary
 mountpoint and unmount it afterwards with `fusermount -u` or the platform
@@ -46,8 +58,8 @@ equivalent.
 - `lib/dune`: Dune rules that invoke camlidl and discover libfuse/camlidl link
   flags.
 - `lib/config/discover.ml`: Dune configurator script. It queries `pkg-config`
-  for `fuse` and uses `opam var camlidl:lib` or `ocamlfind query camlidl` for
-  camlidl runtime linking.
+  for `fuse3 >= 3.10` and uses `opam var camlidl:lib` or
+  `ocamlfind query camlidl` for camlidl runtime linking.
 - `lib/Fuse.ml` and `lib/Fuse.mli`: public OCaml API.
 - `lib/Fuse_lib.ml`: callback registration and FUSE command loop dispatch.
 - `lib/Fuse_util.c`: hand-written C glue between FUSE callbacks and OCaml

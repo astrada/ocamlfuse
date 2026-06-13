@@ -12,15 +12,20 @@ The migration must preserve the existing camlidl-based generation model unless
 an implementation milestone proves that camlidl cannot represent the required
 FUSE 3 surface safely.
 
-## Current Baseline
+## Current State
 
-The repository currently targets libfuse 2:
+The repository is partway through the libfuse 3 migration:
 
-- `lib/Fuse_bindings.idl` defines `FUSE_USE_VERSION 26` and includes
+- Build and package discovery target libfuse 3 through `pkg-config fuse3`.
+- `conf-libfuse3.opam` checks `pkg-config --atleast-version=3.10 fuse3`.
+- The public opam and Dune package is `ocamlfuse3`.
+- The internal Dune library remains `fuse`, so the OCaml top-level module is
+  still `Fuse`.
+- Generated libfuse flag files are named `fuse3.cflags.sexp` and
+  `fuse3.libs.sexp`.
+- The callback and lifecycle implementation still need the FUSE 3 port:
+  `lib/Fuse_bindings.idl` defines `FUSE_USE_VERSION 26` and includes
   `<fuse.h>`.
-- `lib/config/discover.ml` queries `pkg-config fuse` and falls back to
-  `-lfuse`.
-- `conf-libfuse.opam` checks `pkg-config --exists fuse`.
 - `lib/Fuse_util.c` uses libfuse 2 lifecycle functions and command-loop types,
   including `fuse_setup`, `fuse_teardown`, `fuse_read_cmd`,
   `fuse_process_cmd`, `fuse_exited`, and `struct fuse_cmd`.
@@ -33,15 +38,14 @@ The repository currently targets libfuse 2:
 ### Build And Packaging
 
 - The build must discover libfuse 3 with `pkg-config fuse3`.
-- The fallback linker flag, if any, must be libfuse 3 specific, such as
-  `-lfuse3`.
+- Do not silently fall back to libfuse 2 discovery or linker flags.
 - Dune-generated flag files should stay isolated behind
   `lib/config/discover.ml`.
 - The opam and Dune package name must be `ocamlfuse3`.
 - The local conf package must be renamed from `conf-libfuse` to
   `conf-libfuse3`.
 - The `ocamlfuse3` opam metadata must depend on `conf-libfuse3`.
-- `conf-libfuse3` must check `pkg-config --exists fuse3`.
+- `conf-libfuse3` must check `pkg-config --atleast-version=3.10 fuse3`.
 - Linux depexts need to be updated to FUSE 3 development packages, for example
   `libfuse3-dev` on Debian and Ubuntu.
 - The minimum supported libfuse 3 version is `3.10`, matching Ubuntu Jammy.

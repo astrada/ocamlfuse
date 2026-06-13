@@ -1,10 +1,10 @@
 (executable
  (name testfs)
- (libraries ocamlfuse unix threads bigarray))
+ (libraries ocamlfuse3 unix threads bigarray))
 
 (executable
  (name client)
- (libraries ocamlfuse unix ounit2)
+ (libraries ocamlfuse3 unix ounit2)
  (foreign_stubs
   (language c)
   (names xattr_stubs)))

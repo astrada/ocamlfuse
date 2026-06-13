@@ -14,8 +14,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-Planning. Core migration decisions are recorded in `requirements.md`; no
-implementation has started in this directory.
+M0 and M1 are complete. Build and package discovery now target libfuse 3;
+callback and lifecycle porting starts in M2.
 
 ## Primary References
 
