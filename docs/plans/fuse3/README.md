@@ -22,8 +22,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0, M1, M2, M3, and M4 are complete. M5 documentation and release preparation
-is planned. Multithreaded loop support is deferred to M6 analysis.
+M0, M1, M2, M3, M4, and M5 are complete. Multithreaded loop support is
+deferred to M6 analysis.
 
 ## Primary References
 

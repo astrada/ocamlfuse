@@ -196,7 +196,7 @@ OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test
 
 ## M5: Documentation And Release Preparation
 
-Status: planned; M5-specific decisions closed. See `m5-plan.md`.
+Status: complete. See `m5-plan.md`.
 
 Update user and agent documentation to describe the completed FUSE 3 binding.
 

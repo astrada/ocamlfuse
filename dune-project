@@ -27,12 +27,11 @@
  (name ocamlfuse3)
  (synopsis "OCaml bindings for FUSE 3 (Filesystem in UserSpacE)")
  (description "\
-This is a binding to FUSE for the OCaml programming language, enabling
-you to write multithreaded filesystems in the OCaml language. It has
-been designed with simplicity as a goal, as you can see by looking at
-example/fusexmp.ml. Efficiency has also been a separate goal. The
-Bigarray library is used for read and writes, allowing the library to
-do zero-copy in OCaml land.")
+This is a binding to FUSE 3 for the OCaml programming language, enabling
+users to implement high-level FUSE filesystems in OCaml. It has been designed
+with simplicity as a goal, as you can see by looking at example/fusexmp.ml.
+The Bigarray library is used for read and write buffers, allowing the library
+to do zero-copy in OCaml land.")
  (depends
   (ocaml (>= 4.02.3))
   base-bigarray

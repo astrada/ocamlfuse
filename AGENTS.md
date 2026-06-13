@@ -4,14 +4,13 @@ Scope: this file applies to the whole repository.
 
 ## Project
 
-This repository is migrating `ocamlfuse` from libfuse 2 to libfuse 3. The build
-and package metadata target libfuse 3. The public opam package and public Dune
-library are named `ocamlfuse3`; the local conf package is `conf-libfuse3`; the
-internal Dune library name remains `fuse`.
+This repository builds `ocamlfuse3`, OCaml bindings for libfuse 3. The public
+opam package and public Dune library are named `ocamlfuse3`; the local conf
+package is `conf-libfuse3`; the internal Dune library name remains `fuse`.
 
 The lifecycle implementation targets FUSE 3 with `FUSE_USE_VERSION 30` and a
 manual high-level `fuse_new`/`fuse_mount`/`fuse_loop` integration. The public
-OCaml callback API is FUSE-3-shaped. The old FUSE-2-shaped callback record is
+OCaml callback API is FUSE-3-shaped. The legacy callback record shape is
 available through the nested `Fuse.Fuse_compat` module for upgrade
 compatibility.
 
@@ -22,7 +21,7 @@ sources instead.
 ## Common Commands
 
 - Build the library and install metadata: `dune build @install` or `make`.
-- Run the M1 FUSE 3 discovery checks:
+- Run the FUSE 3 discovery checks:
   `dune build conf-libfuse3.opam ocamlfuse3.opam` and
   `dune build lib/fuse3.cflags.sexp lib/fuse3.libs.sexp`.
 - Build the examples: `dune build example/hello.exe example/fusexmp.exe` or
@@ -80,6 +79,7 @@ equivalent.
   requires `clang-format` in `PATH`.
 - `docs/`: agent-oriented project documentation. Start with
   `docs/README.md`.
+- `docs/release-notes.md`: unreleased release notes for the FUSE 3 package.
 
 ## Binding Workflow
 
@@ -135,3 +135,6 @@ generally raise `Unix.Unix_error`, `Fuse_lib` converts them to
 
 When updating the documentations, keep the docs descriptive of the current code
 rather than describing the last modification or refactoring.
+Use `docs/bindings.md` for binding architecture and maintenance details, and
+`docs/release-notes.md` for user-visible package, API, runtime, and testing
+changes.

@@ -1,6 +1,6 @@
 # M5 Plan: Documentation And Release Preparation
 
-Status: planned; M5-specific decisions are closed in this plan.
+Status: complete; M5-specific decisions are closed in this plan.
 
 Depends on M4, which is complete.
 
@@ -47,17 +47,24 @@ The main stale documentation surfaces are:
 - `AGENTS.md`, which still describes the repository as "migrating" instead of
   describing the current FUSE 3 codebase.
 
-## Expected File Changes
+## Implementation Results
 
-- `README.md`
-- `docs/bindings.md`
-- `docs/README.md`
-- `docs/release-notes.md`
-- `AGENTS.md`
-- `dune-project`
-- generated `ocamlfuse3.opam`
-- generated `conf-libfuse3.opam`, only if Dune regenerates metadata
-- FUSE 3 planning docs as needed
+- `README.md` describes `ocamlfuse3`, libfuse 3 requirements, Linux support,
+  build and test commands, examples, the native `Fuse` API, and
+  `Fuse.Fuse_compat`.
+- `docs/bindings.md` describes the current camlidl/libfuse 3 binding,
+  generated `fuse3` flag files, FUSE 3 lifecycle, runtime behavior, and
+  callback maintenance workflow.
+- `docs/release-notes.md` documents the unreleased FUSE 3 migration, package
+  changes, API changes, compatibility limits, runtime behavior, and mounted
+  test requirements.
+- `docs/README.md` links the release notes and reframes `docs/plans/fuse3/` as
+  migration history plus remaining follow-up plans.
+- `AGENTS.md` describes the repository as the current FUSE 3 binding instead
+  of an active migration.
+- `dune-project` and generated `ocamlfuse3.opam` describe FUSE 3 and no longer
+  claim current multithreaded filesystem support.
+- `conf-libfuse3.opam` did not change when opam files were regenerated.
 
 ## Implementation Checklist
 
@@ -153,7 +160,7 @@ Active docs after M5 should communicate these facts:
 
 ## Verification
 
-Run these checks for M5:
+These checks passed for M5:
 
 ```sh
 dune build conf-libfuse3.opam ocamlfuse3.opam
@@ -162,11 +169,12 @@ dune build example/hello.exe example/fusexmp.exe
 make test
 ```
 
-Run `make test` outside the sandbox on a Linux host with `/dev/fuse` access for
-the mounted smoke verification. The sandbox skip path can be checked separately
-with `make test` inside the sandbox when `/dev/fuse` is unavailable.
+`make test` passed outside the sandbox on a Linux host with `/dev/fuse` access.
+The sandbox skip path was checked separately with `make test` inside the
+sandbox, where `/dev/fuse` is unavailable. It printed `SKIP` and exited
+successfully.
 
-Check active documentation for stale current-state claims:
+The active documentation stale-claim check passed:
 
 ```sh
 rg -n \
@@ -174,12 +182,12 @@ rg -n \
   README.md docs/README.md docs/bindings.md docs/release-notes.md AGENTS.md dune-project ocamlfuse3.opam.template ocamlfuse3.opam
 ```
 
-Expected result: no matches in active documentation or package descriptions.
+Result: no matches in active documentation or package descriptions.
 Historical references may remain in `docs/plans/fuse3/`,
 `docs/plans/archived/`, source comments, and release notes when explicitly
 identified as history or migration notes.
 
-Also run:
+These checks also passed:
 
 ```sh
 rg -n "[ \t]+$" README.md docs AGENTS.md dune-project ocamlfuse3.opam.template
