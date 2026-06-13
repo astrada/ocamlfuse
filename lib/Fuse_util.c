@@ -52,8 +52,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define FUSE_USE_VERSION 26
+#define FUSE_USE_VERSION 30
 #include <fuse.h>
+#include <fuse_lowlevel.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
 
@@ -238,6 +239,14 @@ int c2ml_unix_error(int c_err) {
                          UNKNOWN_ERR in this file */
 }
 
+static value make_bad_unix_error(int c_err) {
+  CAMLparam0();
+  CAMLlocal1(vres);
+  vres = caml_alloc(1, 0);
+  Store_field(vres, 0, Val_int(c2ml_unix_error(c_err)));
+  CAMLreturn(vres);
+}
+
 /* end "Thisk sucks" part */
 
 int ml2c_unix_file_kind[] = {S_IFREG, S_IFDIR, S_IFCHR, S_IFBLK,
@@ -284,8 +293,7 @@ void ml2c_Unix_struct_statvfs(value v, struct statvfs *st) {
    */
 }
 
-#define FOR_ALL_OPS(MACRO)                                                     \
-  MACRO(init)                                                                  \
+#define FOR_ALL_NON_INIT_OPS(MACRO)                                            \
   MACRO(getattr)                                                               \
   MACRO(readlink)                                                              \
   MACRO(readdir)                                                               \
@@ -302,7 +310,7 @@ void ml2c_Unix_struct_statvfs(value v, struct statvfs *st) {
   MACRO(chmod)                                                                 \
   MACRO(chown)                                                                 \
   MACRO(truncate)                                                              \
-  MACRO(utime)                                                                 \
+  MACRO(utimens)                                                               \
   MACRO(open)                                                                  \
   MACRO(read)                                                                  \
   MACRO(write)                                                                 \
@@ -314,6 +322,10 @@ void ml2c_Unix_struct_statvfs(value v, struct statvfs *st) {
   MACRO(getxattr)                                                              \
   MACRO(listxattr)                                                             \
   MACRO(removexattr)
+
+#define FOR_ALL_OPS(MACRO)                                                     \
+  MACRO(init)                                                                  \
+  FOR_ALL_NON_INIT_OPS(MACRO)
 
 /*
    TODO: missing callbacks for fuse API version 2.7
@@ -338,39 +350,38 @@ void ml2c_Unix_struct_statvfs(value v, struct statvfs *st) {
 
 static struct fuse_operations ops = {FOR_ALL_OPS(SET_NULL_OP)};
 
-static const value *ocaml_list_length = NULL;
-
 #define DECLARE_OP_CLOSURE(OPNAME) static const value *OPNAME##_closure = NULL;
 FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 
-#define init_ARGS (struct fuse_conn_info * conn)
-#define init_CALL_ARGS (conn)
-#define init_RTYPE void *
-#define init_CB vres = caml_callback(*init_closure, Val_unit);
-/* TODO: the result from init is wrong, it should return unit */
-#define init_RES
-
-#define getattr_ARGS (const char *path, struct stat *buf)
-#define getattr_CALL_ARGS (path, buf)
+#define getattr_ARGS                                                           \
+  (const char *path, struct stat *buf, struct fuse_file_info *fi)
+#define getattr_CALL_ARGS (path, buf, fi)
 #define getattr_RTYPE int
 #define getattr_CB                                                             \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback(*getattr_closure, vpath);
+  (void)fi;                                                                    \
+  if (path == NULL) {                                                          \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vres = caml_callback(*getattr_closure, vpath);                             \
+  }
 #define getattr_RES ml2c_Unix_stats_struct_stat(Field(vres, 0), buf);
 
 /* TODO: allow ocaml to use the offset and the stat argument of the filler */
 #define readdir_ARGS                                                           \
   (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,          \
-   struct fuse_file_info *info)
-#define readdir_CALL_ARGS (path, buf, filler, offset, info)
+   struct fuse_file_info *info, enum fuse_readdir_flags flags)
+#define readdir_CALL_ARGS (path, buf, filler, offset, info, flags)
 #define readdir_RTYPE int
 #define readdir_CB                                                             \
+  (void)offset;                                                                \
+  (void)flags;                                                                 \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*readdir_closure, vpath, Val_int(info->fh));
+  vres = caml_callback2(*readdir_closure, vpath, Val_int(info ? info->fh : 0));
 #define readdir_RES                                                            \
   vtmp = Field(vres, 0);                                                       \
   while (Is_block(vtmp)) {                                                     \
-    if (filler(buf, String_val(Field(vtmp, 0)), NULL, 0))                      \
+    if (filler(buf, String_val(Field(vtmp, 0)), NULL, 0, 0))                   \
       break;                                                                   \
     if (res != 0)                                                              \
       break;                                                                   \
@@ -426,13 +437,17 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   vres = caml_callback2(*symlink_closure, vpath, vtmp);
 #define symlink_RES
 
-#define rename_ARGS (const char *path, const char *dest)
-#define rename_CALL_ARGS (path, dest)
+#define rename_ARGS (const char *path, const char *dest, unsigned int flags)
+#define rename_CALL_ARGS (path, dest, flags)
 #define rename_RTYPE int
 #define rename_CB                                                              \
-  vpath = caml_copy_string(path);                                              \
-  vtmp = caml_copy_string(dest);                                               \
-  vres = caml_callback2(*rename_closure, vpath, vtmp);
+  if (flags != 0) {                                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vtmp = caml_copy_string(dest);                                             \
+    vres = caml_callback2(*rename_closure, vpath, vtmp);                       \
+  }
 #define rename_RES
 
 #define link_ARGS (const char *path, const char *dest)
@@ -444,38 +459,67 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   vres = caml_callback2(*link_closure, vpath, vtmp);
 #define link_RES
 
-#define chmod_ARGS (const char *path, mode_t mode)
-#define chmod_CALL_ARGS (path, mode)
+#define chmod_ARGS (const char *path, mode_t mode, struct fuse_file_info *fi)
+#define chmod_CALL_ARGS (path, mode, fi)
 #define chmod_RTYPE int
 #define chmod_CB                                                               \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*chmod_closure, vpath, Val_int(mode));
+  (void)fi;                                                                    \
+  if (path == NULL) {                                                          \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vres = caml_callback2(*chmod_closure, vpath, Val_int(mode));               \
+  }
 #define chmod_RES
 
-#define chown_ARGS (const char *path, uid_t uid, gid_t gid)
-#define chown_CALL_ARGS (path, uid, gid)
+#define chown_ARGS                                                             \
+  (const char *path, uid_t uid, gid_t gid, struct fuse_file_info *fi)
+#define chown_CALL_ARGS (path, uid, gid, fi)
 #define chown_RTYPE int
 #define chown_CB                                                               \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback3(*chown_closure, vpath, Val_int(uid), Val_int(gid));
+  (void)fi;                                                                    \
+  if (path == NULL) {                                                          \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vres = caml_callback3(*chown_closure, vpath, Val_int(uid), Val_int(gid));  \
+  }
 #define chown_RES
 
-#define truncate_ARGS (const char *path, off_t size)
-#define truncate_CALL_ARGS (path, size)
+#define truncate_ARGS (const char *path, off_t size, struct fuse_file_info *fi)
+#define truncate_CALL_ARGS (path, size, fi)
 #define truncate_RTYPE int
 #define truncate_CB                                                            \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*truncate_closure, vpath, caml_copy_int64(size));
+  (void)fi;                                                                    \
+  if (path == NULL) {                                                          \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vres = caml_callback2(*truncate_closure, vpath, caml_copy_int64(size));    \
+  }
 #define truncate_RES
 
-#define utime_ARGS (const char *path, struct utimbuf *buf)
-#define utime_CALL_ARGS (path, buf)
-#define utime_RTYPE int
-#define utime_CB                                                               \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback3(*utime_closure, vpath, caml_copy_double(buf->actime),  \
-                        caml_copy_double(buf->modtime));
-#define utime_RES
+#define utimens_ARGS                                                           \
+  (const char *path, const struct timespec tv[2], struct fuse_file_info *fi)
+#define utimens_CALL_ARGS (path, tv, fi)
+#define utimens_RTYPE int
+#define utimens_CB                                                             \
+  (void)fi;                                                                    \
+  if (path == NULL) {                                                          \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else if (tv[0].tv_nsec == UTIME_NOW || tv[0].tv_nsec == UTIME_OMIT ||      \
+             tv[1].tv_nsec == UTIME_NOW || tv[1].tv_nsec == UTIME_OMIT) {      \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vres = caml_callback3(                                                     \
+        *utimens_closure, vpath,                                               \
+        caml_copy_double((double)tv[0].tv_sec +                                \
+                         ((double)tv[0].tv_nsec / 1000000000.0)),              \
+        caml_copy_double((double)tv[1].tv_sec +                                \
+                         ((double)tv[1].tv_nsec / 1000000000.0)));             \
+  }
+#define utimens_RES
 
 #define open_ARGS (const char *path, struct fuse_file_info *fi)
 #define open_CALL_ARGS (path, fi)
@@ -648,6 +692,24 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   vres = caml_callback2(*removexattr_closure, vpath, caml_copy_string(name));
 #define removexattr_RES
 
+static void *gm281_ops_init(struct fuse_conn_info *conn,
+                            struct fuse_config *cfg) {
+  CAMLparam0();
+  CAMLlocal1(vres);
+  (void)conn;
+  (void)cfg;
+  vres = caml_callback(*init_closure, Val_unit);
+  (void)vres;
+  CAMLreturnT(void *, NULL);
+}
+
+static void *ops_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
+  caml_acquire_runtime_system();
+  void *ret = gm281_ops_init(conn, cfg);
+  caml_release_runtime_system();
+  return ret;
+}
+
 #define CALLBACK(OPNAME)                                                       \
   static OPNAME##_RTYPE gm281_ops_##OPNAME OPNAME##_ARGS {                     \
     CAMLparam0();                                                              \
@@ -674,7 +736,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     return ret;                                                                \
   }
 
-FOR_ALL_OPS(CALLBACK)
+FOR_ALL_NON_INIT_OPS(CALLBACK)
 
 #define SET_OPERATION(OPNAME)                                                  \
   if (op->OPNAME == NULL)                                                      \
@@ -690,21 +752,6 @@ void set_fuse_operations(struct fuse_operation_names const *op) {
 
 struct fuse_operations *get_fuse_operations() { return &ops; }
 
-const value *ocaml_fuse_loop_closure;
-
-int mainloop(struct fuse *f, int multithreaded) {
-  CAMLparam0();
-  if (f == NULL)
-    return (-1);
-
-  CAMLlocal1(_fuse);
-  _fuse = caml_alloc(1, Abstract_tag);
-  Store_field(_fuse, 0, (value)f);
-
-  CAMLreturnT(int, caml_callback2(*ocaml_fuse_loop_closure, _fuse,
-                                  Val_bool(multithreaded)));
-}
-
 void ml_fuse_init() {
   c2ml_unix_error_vect = invert_array(
       ml2c_unix_error_vect, &ml2c_unix_error_vect_dim,
@@ -712,26 +759,96 @@ void ml_fuse_init() {
                                      the beginning of file */
 }
 
-void ml_fuse_main(int argc, str *argv, struct fuse_operations const *op) {
-  ocaml_fuse_loop_closure = caml_named_value("ocaml_fuse_loop");
-  ocaml_list_length = caml_named_value("ocaml_list_length");
+enum ml_fuse_main_status {
+  ML_FUSE_MAIN_OK = 0,
+  ML_FUSE_MAIN_CMDLINE = 1,
+  ML_FUSE_MAIN_NO_MOUNTPOINT = 2,
+  ML_FUSE_MAIN_NEW = 3,
+  ML_FUSE_MAIN_MOUNT = 4,
+  ML_FUSE_MAIN_DAEMONIZE = 5,
+  ML_FUSE_MAIN_SIGNAL_HANDLERS = 6,
+  ML_FUSE_MAIN_LOOP = 7,
+};
 
-  char *mountpoint;
-  int multithreaded;
-  int fd;
+int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op) {
+  struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
+  struct fuse_cmdline_opts opts;
+  struct fuse *fuse = NULL;
+  struct fuse_session *session = NULL;
+  int loop_result;
+  int status = ML_FUSE_MAIN_OK;
+  int signal_handlers_set = 0;
+  int mounted = 0;
 
-  struct fuse *fuse = fuse_setup(argc, argv, op, sizeof(struct fuse_operations),
-                                 &mountpoint, &multithreaded, &fd);
+  memset(&opts, 0, sizeof(opts));
 
-  if (fuse != NULL) {
-    mainloop(fuse, multithreaded);
-    fuse_teardown(fuse, mountpoint);
+  if (fuse_parse_cmdline(&args, &opts) != 0) {
+    status = ML_FUSE_MAIN_CMDLINE;
+    goto out_args;
   }
-}
 
-value ocaml_fuse_is_null(value v) /* For Com.opaque values */
-{
-  CAMLparam1(v);
-  CAMLreturn(
-      Val_bool(0 == Field(v, 0))); // Is this the right way to check for null?
+  if (opts.show_version) {
+    printf("FUSE library version %s\n", fuse_pkgversion());
+    fuse_lowlevel_version();
+    goto out_opts;
+  }
+
+  if (opts.show_help) {
+    fuse_cmdline_help();
+    fuse_lib_help(&args);
+    goto out_opts;
+  }
+
+  if (opts.mountpoint == NULL) {
+    status = ML_FUSE_MAIN_NO_MOUNTPOINT;
+    goto out_opts;
+  }
+
+  fuse = fuse_new(&args, op, sizeof(*op), NULL);
+  if (fuse == NULL) {
+    status = ML_FUSE_MAIN_NEW;
+    goto out_opts;
+  }
+
+  if (fuse_mount(fuse, opts.mountpoint) != 0) {
+    status = ML_FUSE_MAIN_MOUNT;
+    goto out_destroy;
+  }
+  mounted = 1;
+
+  if (fuse_daemonize(1) != 0) {
+    status = ML_FUSE_MAIN_DAEMONIZE;
+    goto out_unmount;
+  }
+
+  session = fuse_get_session(fuse);
+  if (fuse_set_signal_handlers(session) != 0) {
+    status = ML_FUSE_MAIN_SIGNAL_HANDLERS;
+    goto out_unmount;
+  }
+  signal_handlers_set = 1;
+
+  caml_release_runtime_system();
+  loop_result = fuse_loop(fuse);
+  caml_acquire_runtime_system();
+
+  if (loop_result != 0)
+    status = ML_FUSE_MAIN_LOOP;
+
+out_unmount:
+  if (signal_handlers_set)
+    fuse_remove_signal_handlers(session);
+  if (mounted)
+    fuse_unmount(fuse);
+
+out_destroy:
+  if (fuse != NULL)
+    fuse_destroy(fuse);
+
+out_opts:
+  free(opts.mountpoint);
+
+out_args:
+  fuse_opt_free_args(&args);
+  return status;
 }

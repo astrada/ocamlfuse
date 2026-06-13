@@ -154,4 +154,15 @@ let default_operations =
 let main argv ops =
   Fuse_bindings.ml_fuse_init ();
   Fuse_bindings.set_fuse_operations (op_names_of_operations ops);
-  Fuse_bindings.ml_fuse_main argv (Fuse_bindings.get_fuse_operations ())
+  match
+    Fuse_bindings.ml_fuse_main argv (Fuse_bindings.get_fuse_operations ())
+  with
+  | 0 -> ()
+  | 1 -> failwith "fuse command-line parsing failed"
+  | 2 -> failwith "fuse mountpoint was not provided"
+  | 3 -> failwith "fuse_new failed"
+  | 4 -> failwith "fuse_mount failed"
+  | 5 -> failwith "fuse_daemonize failed"
+  | 6 -> failwith "fuse_set_signal_handlers failed"
+  | 7 -> failwith "fuse_loop failed"
+  | status -> failwith ("fuse failed with status " ^ string_of_int status)

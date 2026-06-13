@@ -25,29 +25,9 @@
 *)
 
 open Fuse_bindings
-open String
-open Thread
 open Fuse_result
 
-let _ = Callback.register "ocaml_list_length" List.length
-
-external is_null : 'a Com.opaque -> bool = "ocaml_fuse_is_null"
-
 let undefined _ = raise (Unix.Unix_error (Unix.ENOSYS, "undefined", ""))
-
-let fuse_loop fuse multithreaded =
-  let thread_pool = Thread_pool.create () in
-  let f =
-    if multithreaded then fun f x -> Thread_pool.add_work f x thread_pool
-    else fun f x -> ignore (f x)
-  in
-  while not (fuse_exited fuse) do
-    let cmd = fuse_read_cmd fuse in
-    if not (is_null cmd) then f (fuse_process_cmd fuse) cmd
-  done;
-  Thread_pool.shutdown thread_pool
-
-let _ = Callback.register "ocaml_fuse_loop" fuse_loop
 
 let default_op_names =
   {

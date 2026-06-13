@@ -23,13 +23,13 @@ The repository is partway through the libfuse 3 migration:
   still `Fuse`.
 - Generated libfuse flag files are named `fuse3.cflags.sexp` and
   `fuse3.libs.sexp`.
-- The callback and lifecycle implementation still need the FUSE 3 port:
-  `lib/Fuse_bindings.idl` defines `FUSE_USE_VERSION 26` and includes
-  `<fuse.h>`.
-- `lib/Fuse_util.c` uses libfuse 2 lifecycle functions and command-loop types,
-  including `fuse_setup`, `fuse_teardown`, `fuse_read_cmd`,
-  `fuse_process_cmd`, `fuse_exited`, and `struct fuse_cmd`.
-- The public OCaml API exposes a FUSE 2 shaped `Fuse.operations` record.
+- `lib/Fuse_bindings.idl` and `lib/Fuse_util.c` define
+  `FUSE_USE_VERSION 30`.
+- `lib/Fuse_util.c` uses a manual FUSE 3 high-level lifecycle with
+  `fuse_new`, `fuse_mount`, `fuse_daemonize`, signal handlers, `fuse_loop`,
+  `fuse_unmount`, and `fuse_destroy`.
+- The public OCaml API still exposes a FUSE 2 shaped `Fuse.operations` record,
+  with temporary FUSE 3 C ABI shims until M3.
 - The e2e suite mounts a test filesystem and validates the currently implemented
   callbacks.
 

@@ -77,7 +77,7 @@ incompatibilities handled by the later milestones.
 
 ## M2: FUSE 3 Lifecycle Skeleton
 
-Status: planned; M2-specific decisions accepted. See `m2-plan.md`.
+Status: complete. See `m2-plan.md`.
 
 Replace the libfuse 2 command-loop integration with a supported FUSE 3
 lifecycle.

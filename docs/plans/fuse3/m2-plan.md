@@ -1,6 +1,6 @@
 # M2 Plan: FUSE 3 Lifecycle Skeleton
 
-Status: planned; M2-specific decisions accepted.
+Status: complete.
 
 Depends on M1, which is complete.
 
@@ -13,9 +13,10 @@ stable until M3.
 M2 should make the library build against libfuse 3. It should not complete the
 FUSE-3-shaped public API or the `Fuse_compat` module; those remain M3 work.
 
-## Current Failures At M1
+## Failures At M1
 
-`dune build @install` currently reaches these expected FUSE 3 incompatibilities:
+At the M1 checkpoint, `dune build @install` reached these expected FUSE 3
+incompatibilities:
 
 - libfuse 3 rejects `FUSE_USE_VERSION 26`;
 - `fuse_setup`, `fuse_teardown`, `fuse_read_cmd`, `fuse_process_cmd`,
@@ -164,3 +165,18 @@ build output but do not commit generated camlidl files.
 
 M2 does not require a successful mounted e2e run. That remains M4, after the
 public API and examples are updated.
+
+## Verification Result
+
+The M2 implementation passes:
+
+```sh
+tools/format_ocaml lib/Fuse.ml lib/Fuse.mli lib/Fuse_lib.ml
+tools/format_c lib/Fuse_util.c
+dune build @install
+dune build example/hello.exe example/fusexmp.exe
+make test
+```
+
+`make test` builds the test binaries and exits successfully with
+`SKIP: /dev/fuse is not available` in the sandbox environment.

@@ -16,8 +16,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0 and M1 are complete. M2 lifecycle decisions are accepted. Multithreaded loop
-support is deferred to M6 analysis.
+M0, M1, and M2 are complete. M3 public API migration is next. Multithreaded
+loop support is deferred to M6 analysis.
 
 ## Primary References
 

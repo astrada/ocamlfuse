@@ -10,7 +10,7 @@ See `public-api-proposal.md` for the proposed OCaml representations of FUSE
 
 ## Lifecycle Delta
 
-The current binding uses libfuse 2 lifecycle and command-loop internals:
+Before M2, the binding used libfuse 2 lifecycle and command-loop internals:
 
 - `fuse_setup`
 - `fuse_teardown`
@@ -20,9 +20,8 @@ The current binding uses libfuse 2 lifecycle and command-loop internals:
 - `struct fuse_cmd`
 
 The FUSE 3 high-level API documents lifecycle functions such as `fuse_mount`,
-`fuse_loop`, `fuse_unmount`, `fuse_destroy`, and `fuse_get_session`. The FUSE 3
-migration must replace the current command-loop integration with a supported
-FUSE 3 lifecycle.
+`fuse_loop`, `fuse_unmount`, `fuse_destroy`, and `fuse_get_session`. M2 replaced
+the old command-loop integration with a supported FUSE 3 lifecycle.
 
 The locally installed libfuse `3.14.0` headers provide:
 
@@ -41,8 +40,8 @@ The migration target is `FUSE_USE_VERSION 30` to support libfuse `3.10` on
 Ubuntu Jammy and avoid dependencies on later FUSE API levels. The first version
 should therefore avoid the FUSE 3.12+ `fuse_loop_mt(f, config)` API.
 
-The M2 lifecycle plan answers the initial lifecycle design in
-`m2-plan.md`. The main design points are:
+The M2 lifecycle implementation uses the design in `m2-plan.md`. The main
+design points are:
 
 - use a manual high-level lifecycle instead of `fuse_main`;
 - force foreground operation for OCaml runtime safety;

@@ -5,15 +5,15 @@ Scope: this file applies to the whole repository.
 ## Project
 
 This repository is migrating `ocamlfuse` from libfuse 2 to libfuse 3. The build
-and package metadata already target libfuse 3. The public opam package and
-public Dune library are named `ocamlfuse3`; the local conf package is
-`conf-libfuse3`; the internal Dune library name remains `fuse`.
+and package metadata target libfuse 3. The public opam package and public Dune
+library are named `ocamlfuse3`; the local conf package is `conf-libfuse3`; the
+internal Dune library name remains `fuse`.
 
-The callback and lifecycle implementation is still mid-migration:
-`lib/Fuse_bindings.idl` defines `FUSE_USE_VERSION 26`, and the hand-written C
-glue still contains libfuse 2 lifecycle and callback shapes. Until the FUSE 3
-port reaches M2/M3 in `docs/plans/fuse3/`, `dune build @install` is expected to
-reach FUSE 3 C API incompatibilities rather than pass.
+The lifecycle implementation targets FUSE 3 with `FUSE_USE_VERSION 30` and a
+manual high-level `fuse_new`/`fuse_mount`/`fuse_loop` integration. The public
+OCaml callback API is still the old FUSE-2-shaped `Fuse.operations` record,
+with temporary C compatibility shims. The FUSE-3-shaped public API and
+`Fuse_compat` module are planned in `docs/plans/fuse3/` M3.
 
 The binding layer is generated with camlidl and completed by hand-written OCaml
 and C glue. Treat the generated binding files as build artifacts and edit their
@@ -22,8 +22,6 @@ sources instead.
 ## Common Commands
 
 - Build the library and install metadata: `dune build @install` or `make`.
-  During the in-progress FUSE 3 migration, this is expected to fail at the
-  callback/lifecycle porting boundary until M2/M3 are implemented.
 - Run the M1 FUSE 3 discovery checks:
   `dune build conf-libfuse3.opam ocamlfuse3.opam` and
   `dune build lib/fuse3.cflags.sexp lib/fuse3.libs.sexp`.
@@ -61,7 +59,7 @@ equivalent.
   for `fuse3 >= 3.10` and uses `opam var camlidl:lib` or
   `ocamlfind query camlidl` for camlidl runtime linking.
 - `lib/Fuse.ml` and `lib/Fuse.mli`: public OCaml API.
-- `lib/Fuse_lib.ml`: callback registration and FUSE command loop dispatch.
+- `lib/Fuse_lib.ml`: callback registration helpers.
 - `lib/Fuse_util.c`: hand-written C glue between FUSE callbacks and OCaml
   callbacks.
 - `lib/Unix_util.ml` and `lib/Unix_util_stubs.c`: Unix helper bindings used by
