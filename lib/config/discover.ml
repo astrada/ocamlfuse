@@ -33,8 +33,7 @@ let () =
       let calmidl_fname = "camlidl.libs.sexp" in
       let camlidl_lib_path =
         match
-          Sys.command
-            (Printf.sprintf "opam var camlidl:lib > %s" calmidl_fname)
+          Sys.command (Printf.sprintf "opam var camlidl:lib > %s" calmidl_fname)
         with
         | 0 -> String.trim (read_file calmidl_fname)
         | _ -> (

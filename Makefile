@@ -15,5 +15,8 @@ example:
 	@dune build example/hello.exe
 	@dune build example/fusexmp.exe
 
-.PHONY: build install uninstall clean example
+format:
+	tools/format_ocaml $(FILES)
+
+.PHONY: build install uninstall clean example format
 
