@@ -37,6 +37,8 @@ Expected locally:
 
 ## M1: Build And Package Discovery
 
+Status: planned; M1-specific decisions accepted. See `m1-plan.md`.
+
 Update build discovery and package metadata without changing runtime behavior.
 
 Tasks:
@@ -45,9 +47,12 @@ Tasks:
 - Update fallback flags to libfuse 3 specific values.
 - Rename the Dune/opam package from `ocamlfuse` to `ocamlfuse3`.
 - Rename the local conf package from `conf-libfuse` to `conf-libfuse3`.
+- Rename generated libfuse flag files to `fuse3.cflags.sexp` and
+  `fuse3.libs.sexp`.
 - Update the `ocamlfuse3` package dependency from `conf-libfuse` to
   `conf-libfuse3`.
 - Update conf package build checks and Linux depexts.
+- Set first-version package availability to Linux-only.
 - Regenerate opam files through Dune.
 
 Exit criteria:
@@ -56,11 +61,19 @@ Exit criteria:
 - With FUSE 3 installed, Dune reaches the C/API incompatibilities expected in
   later milestones.
 
-Verification:
+Targeted verification:
 
 ```sh
-dune build @install
+pkg-config --atleast-version=3.10 fuse3
+pkg-config --modversion fuse3
+pkg-config --cflags --libs fuse3
+dune build conf-libfuse3.opam ocamlfuse3.opam
+dune build lib/fuse3.cflags.sexp lib/fuse3.libs.sexp
 ```
+
+`dune build @install` is not an M1-only exit criterion unless M1 is bundled with
+M2/M3, because switching discovery to libfuse 3 exposes the FUSE 3 C API
+incompatibilities handled by the later milestones.
 
 ## M2: FUSE 3 Lifecycle Skeleton
 
