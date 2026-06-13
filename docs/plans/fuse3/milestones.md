@@ -155,18 +155,26 @@ make test
 
 ## M4: Examples And e2e Tests
 
+Status: planned; M4-specific decisions closed. See `m4-plan.md`.
+
 Update executable examples and the e2e suite to validate the FUSE 3 binding.
 
 Tasks:
 
-- Update `example/hello.ml` and `example/fusexmp.ml` for any public API changes.
-- Update `test/e2e/testfs.ml` for any callback shape changes.
+- Update `example/hello.ml` and `example/fusexmp.ml` to use native `Fuse`
+  rather than `Fuse.Fuse_compat`.
+- Update `test/e2e/testfs.ml` to use native `Fuse` and the FUSE 3 callback
+  shapes.
 - Update the OUnit2 client for `utimens` and any intentionally unsupported FUSE
   3 behavior.
+- Add a compile-only compatibility target so `Fuse.Fuse_compat` remains checked
+  after examples and e2e migrate to native `Fuse`.
 - Verify smoke and full e2e runs on a host with `/dev/fuse`.
 
 Exit criteria:
 
+- Examples and the mounted e2e filesystem compile against native `Fuse`.
+- Only the compile-only compatibility target uses `Fuse.Fuse_compat`.
 - `make test` passes on a FUSE-capable Linux host.
 - `make e2e` passes on a FUSE-capable Linux host.
 - The skip path still works when FUSE is unavailable.
@@ -174,7 +182,13 @@ Exit criteria:
 Verification:
 
 ```sh
+tools/format_ocaml \
+  example/hello.ml example/fusexmp.ml \
+  test/e2e/testfs.ml test/e2e/client.ml test/e2e/compat_compile.ml
+tools/format_c test/e2e/xattr_stubs.c
 dune build @install
+dune build example/hello.exe example/fusexmp.exe
+dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
 make test
 make e2e
 OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test
