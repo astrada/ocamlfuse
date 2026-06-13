@@ -17,14 +17,18 @@ sources instead.
 - Build the library and install metadata: `dune build @install` or `make`.
 - Build the examples: `dune build example/hello.exe example/fusexmp.exe` or
   `make example`.
+- Run the smoke test: `make test`.
+- Run the full end-to-end suite: `make e2e` or `test/e2e/run.sh full`.
 - Format tracked OCaml sources: `tools/format_ocaml`.
 - Format selected OCaml sources: `tools/format_ocaml path/to/file.ml
   path/to/file.mli`.
 - Clean build artifacts: `dune clean` or `make clean`.
 
-There is no dedicated test suite in this repository. For non-documentation code
-changes, run `dune build @install`. For public API or example changes, also run
-the example build.
+For non-documentation code changes, run `dune build @install` and `make test`.
+For public API or example changes, also run the example build. `make test`
+builds the e2e test binaries, then runs the smoke test when FUSE is available.
+If FUSE is unavailable, it prints `SKIP` and exits successfully. Set
+`OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a failure.
 
 Running the examples mounts FUSE filesystems and requires a working libfuse 2
 runtime, `/dev/fuse` access, and mount permissions. Do not assume those are
@@ -47,6 +51,9 @@ equivalent.
 - `lib/Unix_util.ml` and `lib/Unix_util_stubs.c`: Unix helper bindings used by
   the library and examples.
 - `example/`: small filesystems used as buildable examples.
+- `test/e2e/`: Linux end-to-end tests. `testfs.ml` implements a temporary
+  backing filesystem, `client.ml` contains OUnit2 assertions, `xattr_stubs.c`
+  provides Linux xattr helpers, and `run.sh` mounts, tests, and cleans up.
 - `tools/format_ocaml`: repository formatter wrapper for `.ml` and `.mli`
   files. It requires `ocamlformat` in `PATH`.
 - `docs/`: agent-oriented project documentation. Start with

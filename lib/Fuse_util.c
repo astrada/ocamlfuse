@@ -577,7 +577,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define fsyncdir_RTYPE int
 #define fsyncdir_CB                                                            \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback3(*fsync_closure, vpath, Val_bool(isdatasync),           \
+  vres = caml_callback3(*fsyncdir_closure, vpath, Val_bool(isdatasync),        \
                         Val_int(fi->fh));
 #define fsyncdir_RES
 
@@ -602,13 +602,14 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   vres = caml_callback2(*getxattr_closure, vpath, caml_copy_string(name));
 #define getxattr_RES                                                           \
   res = caml_string_length(Field(vres, 0));                                    \
-  if (size > 0)                                                                \
-    if (caml_string_length(Field(vres, 0)) >= size) {                          \
-      res = -UNKNOWN_ERR;                                                      \
+  if (size > 0) {                                                              \
+    if (caml_string_length(Field(vres, 0)) > size) {                           \
+      res = -ERANGE;                                                           \
     } else {                                                                   \
       memcpy(val, String_val(Field(vres, 0)),                                  \
              caml_string_length(Field(vres, 0)));                              \
-    }
+    }                                                                          \
+  }
 
 #define listxattr_ARGS (const char *path, char *list, size_t size)
 #define listxattr_CALL_ARGS (path, list, size)

@@ -25,6 +25,7 @@ depends: [
   "camlidl"
   "dune-configurator"
   "conf-libfuse"
+  "ounit2" {with-test}
   "odoc" {with-doc}
 ]
 build: [

@@ -15,8 +15,15 @@ example:
 	@dune build example/hello.exe
 	@dune build example/fusexmp.exe
 
+test:
+	@dune build @install
+	@test/e2e/run.sh smoke
+
+e2e:
+	@dune build @install
+	@test/e2e/run.sh full
+
 format:
 	tools/format_ocaml $(FILES)
 
-.PHONY: build install uninstall clean example format
-
+.PHONY: build install uninstall clean example test e2e format

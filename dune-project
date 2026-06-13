@@ -40,4 +40,5 @@ do zero-copy in OCaml land.")
   base-unix
   camlidl
   dune-configurator
-  conf-libfuse))
+  conf-libfuse
+  ("ounit2" :with-test)))
