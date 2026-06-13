@@ -12,7 +12,8 @@ The lifecycle implementation targets FUSE 3 with `FUSE_USE_VERSION 30` and a
 manual high-level `fuse_new`/`fuse_mount`/`fuse_loop` integration. The public
 OCaml callback API is FUSE-3-shaped. The legacy callback record shape is
 available through the nested `Fuse.Fuse_compat` module for upgrade
-compatibility.
+compatibility. The current runtime is single-threaded; multithreaded loop
+support is analyzed in `docs/plans/fuse3/m6-analysis.md` but not implemented.
 
 The binding layer is generated with camlidl and completed by hand-written OCaml
 and C glue. Treat the generated binding files as build artifacts and edit their

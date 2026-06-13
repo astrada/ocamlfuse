@@ -48,8 +48,9 @@ The FUSE loop releases the OCaml runtime while blocked in `fuse_loop`, then
 reacquires it before returning to OCaml. Callback wrappers are responsible for
 acquiring the runtime before invoking OCaml callbacks.
 
-The current runtime path uses the single-threaded high-level loop. Support for
-the libfuse worker-thread loop is tracked separately.
+The current runtime path uses the single-threaded high-level loop. The
+multithreaded libfuse loop analysis is in
+`docs/plans/fuse3/m6-analysis.md`; implementation is not started.
 
 ## Public API Shape
 

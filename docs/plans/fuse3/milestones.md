@@ -229,6 +229,9 @@ explicitly identified as historical context.
 
 ## M6: Multithreaded Loop Analysis
 
+Status: analysis complete; implementation is not started. See
+`m6-analysis.md`.
+
 Analyze whether and how `ocamlfuse3` should support a multithreaded libfuse
 event loop after the initial FUSE 3 lifecycle port is working.
 
@@ -249,9 +252,10 @@ Tasks:
 Exit criteria:
 
 - A documented decision exists for whether `ocamlfuse3` supports
-  multithreaded libfuse loops.
+  multithreaded libfuse loops: support only as an explicit opt-in mode.
 - If supported, the required C/OCaml runtime registration and cleanup model is
-  specified before implementation.
+  specified before implementation: use per-thread registration for libfuse
+  worker threads with pthread TLS cleanup.
 - If not supported, the documentation explains that the FUSE 3 binding runs
   the high-level loop in single-threaded mode.
 

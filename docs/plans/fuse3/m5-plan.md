@@ -81,7 +81,7 @@ The main stale documentation surfaces are:
    - describe `Fuse` as the native FUSE 3 API and `Fuse.Fuse_compat` as the
      upgrade path;
    - replace old multithreaded claims with the current single-threaded loop
-     behavior and point to M6 for future analysis;
+     behavior and point to M6 for multithreaded analysis;
    - preserve historical attribution in a short history section instead of
      keeping stale SourceForge-era installation and testing instructions as
      active guidance.

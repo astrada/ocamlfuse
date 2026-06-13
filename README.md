@@ -118,7 +118,8 @@ sentinels that old `utime` callbacks cannot represent, and convert file handles
 back to `int` with overflow checks.
 
 The current FUSE loop is single-threaded and foreground-oriented. The
-multithreaded libfuse loop is tracked separately for future analysis.
+multithreaded libfuse loop analysis is tracked in
+`docs/plans/fuse3/m6-analysis.md`; implementation is not started.
 
 ## Documentation
 

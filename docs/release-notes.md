@@ -52,7 +52,8 @@ binding keeps the FUSE process foreground-oriented and releases the OCaml
 runtime while blocked in the FUSE loop. Callback wrappers reacquire the runtime
 before calling OCaml callbacks.
 
-Support for the libfuse worker-thread loop remains a separate design question.
+Support for the libfuse worker-thread loop remains unimplemented. The current
+analysis recommends adding it only as an explicit opt-in mode.
 
 ## Tests
 

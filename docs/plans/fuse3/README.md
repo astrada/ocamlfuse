@@ -14,6 +14,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
   e2e tests.
 - `m5-plan.md`: detailed plan and closed decisions for documentation and
   release preparation.
+- `m6-analysis.md`: completed analysis and recommendations for opt-in
+  multithreaded loop support.
 - `api-delta.md`: known callback and lifecycle differences that affect the
   current binding.
 - `public-api-proposal.md`: OCaml representations for FUSE 3-specific public
@@ -22,8 +24,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0, M1, M2, M3, M4, and M5 are complete. Multithreaded loop support is
-deferred to M6 analysis.
+M0, M1, M2, M3, M4, and M5 are complete. M6 multithreaded-loop analysis is
+complete; implementation is not started.
 
 ## Primary References
 
