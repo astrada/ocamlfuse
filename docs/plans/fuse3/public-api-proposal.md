@@ -63,8 +63,13 @@ applies only fields that are meaningful for the callback:
   `fi_update_noflush` are meaningful for `fopen`.
 - `fi_update_cache_readdir` is meaningful for `opendir`.
 
-`Fuse_compat` should convert the old `int option` file handle API to and from
-`file_handle` with checked `Int64.of_int` and `Int64.to_int` conversions.
+`Fuse.Fuse_compat` should convert the old `int option` file handle API to and
+from `file_handle` with checked `Int64.of_int` and `Int64.to_int` conversions.
+
+For M3, expose the compatibility API as the nested module `Fuse.Fuse_compat`.
+The library is wrapped and `Fuse.ml` is the root module, so this avoids changing
+Dune wrapping or exposing internal modules as public top-level modules. After
+`open Fuse`, callers can still refer to `Fuse_compat`.
 
 ## Rename Flags
 
@@ -87,9 +92,10 @@ Rationale:
   but exposing the field keeps Linux behavior visible.
 - `rename_flags_raw` preserves unknown or future bits.
 
-`Fuse.rename` should receive `rename_flags`. `Fuse_compat.rename` should call
-the old two-argument callback only when `rename_flags_raw = 0`; otherwise it
-should return `EINVAL` unless a more precise compatibility behavior is chosen.
+`Fuse.rename` should receive `rename_flags`. `Fuse.Fuse_compat.rename` should
+call the old two-argument callback only when `rename_flags_raw = 0`; otherwise
+it should return `EINVAL` unless a more precise compatibility behavior is
+chosen.
 
 ## Readdir Flags And Entries
 
@@ -123,7 +129,7 @@ Mapping policy:
 - `entry_offset = None` maps to offset `0`, preserving the current stateless
   readdir style.
 - `entry_flags.fill_dir_plus = true` maps to `FUSE_FILL_DIR_PLUS`.
-- `Fuse_compat.readdir` ignores `readdir_flags` and returns entries with no
+- `Fuse.Fuse_compat.readdir` ignores `readdir_flags` and returns entries with no
   stats, no offset, and default fill flags.
 
 This shape preserves the current simple `string list` compatibility path while
@@ -156,9 +162,9 @@ utimens : string -> timestamp -> timestamp -> file_info option -> unit
 
 The first timestamp is atime and the second is mtime.
 
-`Fuse_compat.utime : string -> float -> float -> unit` should convert floats to
-`Time { tv_sec; tv_nsec }`, documenting that the compatibility path may lose
-precision compared with direct `Fuse.utimens` usage.
+`Fuse.Fuse_compat.utime : string -> float -> float -> unit` should convert
+floats to `Time { tv_sec; tv_nsec }`, documenting that the compatibility path
+may lose precision compared with direct `Fuse.utimens` usage.
 
 ## First API Surface Sketch
 

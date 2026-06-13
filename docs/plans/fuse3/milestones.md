@@ -117,6 +117,8 @@ dune build @install
 
 ## M3: Existing Callback Parity
 
+Status: planned; M3-specific decisions closed. See `m3-plan.md`.
+
 Port every currently implemented `Fuse.operations` callback to the FUSE 3
 signature shape.
 
@@ -126,15 +128,15 @@ Tasks:
   `lib/Fuse_util.c`.
 - Update `lib/Fuse_bindings.idl` for any changed or removed C declarations.
 - Implement the new FUSE-3-shaped `Fuse` API.
-- Add `Fuse_compat` with the old FUSE 2 shaped operations record.
+- Add nested `Fuse.Fuse_compat` with the old FUSE 2 shaped operations record.
 - Replace `utime` with `utimens` in `Fuse`.
-- Bridge `Fuse_compat.utime` to `Fuse.utimens`.
+- Bridge `Fuse.Fuse_compat.utime` to `Fuse.utimens`.
 - Keep `Fuse.ml` and `Fuse.mli` synchronized.
 
 Exit criteria:
 
 - All currently exposed operations compile against FUSE 3.
-- The old API compiles through `Fuse_compat`.
+- The old API compiles through `Fuse.Fuse_compat`.
 - Unsupported new parameters have documented behavior.
 - No generated camlidl output is committed.
 

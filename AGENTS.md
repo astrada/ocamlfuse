@@ -44,6 +44,9 @@ builds the e2e test binaries, then runs the smoke test when FUSE is available.
 If FUSE is unavailable, it prints `SKIP` and exits successfully. Set
 `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a failure.
 
+The e2e tests (`make test`, `make e2e`) should be run outside the sanbox,
+because inside the sandbox `/dev/fuse` is not accessible.
+
 Running the examples mounts FUSE filesystems and requires a working libfuse
 runtime, `/dev/fuse` access, and mount permissions. Do not assume those are
 available in sandboxes or CI. If you run an example manually, use a temporary
