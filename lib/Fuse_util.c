@@ -329,8 +329,8 @@ void ml2c_Unix_struct_statvfs(value v, struct statvfs *st) {
    int(* 	lock )(const char *, struct fuse_file_info *, int cmd, struct
    flock *) int(* 	utimens )(const char *, const struct timespec tv[2])
    int(* 	bmap )(const char *, size_t blocksize, uint64_t *idx)
-   int(* 	ioctl )(const char *, int cmd, void *arg, struct fuse_file_info *,
-   unsigned int flags, void *data) int(* 	poll )(const char *, struct
+   int(* 	ioctl )(const char *, int cmd, void *arg, struct fuse_file_info
+   *, unsigned int flags, void *data) int(* 	poll )(const char *, struct
    fuse_file_info *, struct fuse_pollhandle *ph, unsigned *reventsp)
 */
 
@@ -688,9 +688,7 @@ void set_fuse_operations(struct fuse_operation_names const *op) {
   FOR_ALL_OPS(SET_OPERATION)
 }
 
-struct fuse_operations *get_fuse_operations() {
-  return &ops;
-}
+struct fuse_operations *get_fuse_operations() { return &ops; }
 
 const value *ocaml_fuse_loop_closure;
 

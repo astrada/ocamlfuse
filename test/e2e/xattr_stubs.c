@@ -23,9 +23,8 @@ static void fail_errno(const char *function_name) {
 
 CAMLprim value ocamlfuse_e2e_setxattr(value pathv, value namev, value valuev) {
   CAMLparam3(pathv, namev, valuev);
-  int result =
-      setxattr(String_val(pathv), String_val(namev), String_val(valuev),
-               caml_string_length(valuev), 0);
+  int result = setxattr(String_val(pathv), String_val(namev),
+                        String_val(valuev), caml_string_length(valuev), 0);
   if (result == -1)
     fail_errno("setxattr");
   CAMLreturn(Val_unit);
@@ -40,9 +39,8 @@ CAMLprim value ocamlfuse_e2e_getxattr(value pathv, value namev) {
 
   result = caml_alloc_string(length);
   if (length > 0) {
-    ssize_t read_length =
-        getxattr(String_val(pathv), String_val(namev), (char *)String_val(result),
-                 length);
+    ssize_t read_length = getxattr(String_val(pathv), String_val(namev),
+                                   (char *)String_val(result), length);
     if (read_length == -1)
       fail_errno("getxattr");
   }
