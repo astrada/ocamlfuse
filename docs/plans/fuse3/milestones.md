@@ -1,0 +1,173 @@
+# FUSE 3 Migration Milestones
+
+## M0: Decisions And Environment
+
+Confirm the decisions from `requirements.md` before changing code.
+
+Exit criteria:
+
+- Minimum libfuse 3 version is selected: `3.10`.
+- `FUSE_USE_VERSION` target is selected: `30`.
+- Public API strategy is selected: FUSE-3-shaped `Fuse` plus `Fuse_compat`.
+- FUSE 3 only versus dual FUSE 2/FUSE 3 support is decided: FUSE 3 only.
+- Package naming is decided: `ocamlfuse3`.
+- Conf package naming is decided: `conf-libfuse3`.
+- Top-level OCaml module naming is decided: `Fuse` remains the FUSE 3 API.
+- First API callback scope is decided: only callbacks needed to replace current
+  behavior.
+- A development environment with `pkg-config fuse3` and libfuse 3 headers is
+  available. The local environment currently satisfies this with libfuse
+  `3.14.0`.
+
+Verification:
+
+```sh
+pkg-config --modversion fuse3
+pkg-config --cflags --libs fuse3
+```
+
+Expected locally:
+
+```sh
+3.14.0
+-I/usr/include/fuse3 -lfuse3 -lpthread
+```
+
+## M1: Build And Package Discovery
+
+Update build discovery and package metadata without changing runtime behavior.
+
+Tasks:
+
+- Update `lib/config/discover.ml` to query `pkg-config fuse3`.
+- Update fallback flags to libfuse 3 specific values.
+- Rename the Dune/opam package from `ocamlfuse` to `ocamlfuse3`.
+- Rename the local conf package from `conf-libfuse` to `conf-libfuse3`.
+- Update the `ocamlfuse3` package dependency from `conf-libfuse` to
+  `conf-libfuse3`.
+- Update conf package build checks and Linux depexts.
+- Regenerate opam files through Dune.
+
+Exit criteria:
+
+- A missing FUSE 3 development package fails with a clear message.
+- With FUSE 3 installed, Dune reaches the C/API incompatibilities expected in
+  later milestones.
+
+Verification:
+
+```sh
+dune build @install
+```
+
+## M2: FUSE 3 Lifecycle Skeleton
+
+Replace the libfuse 2 command-loop integration with a supported FUSE 3
+lifecycle.
+
+Tasks:
+
+- Remove or replace `fuse_cmd`, `fuse_read_cmd`, `fuse_process_cmd`, and
+  `fuse_exited` from `lib/Fuse_bindings.idl` and `lib/Fuse_util.c`.
+- Set `FUSE_USE_VERSION` to `30`.
+- Decide whether `ml_fuse_main` calls `fuse_main` or manually performs create,
+  mount, loop, unmount, and destroy steps.
+- Preserve OCaml 5 foreground behavior.
+- Release the OCaml runtime while the FUSE loop blocks.
+- Keep callback wrappers responsible for acquiring the OCaml runtime before
+  calling OCaml.
+
+Exit criteria:
+
+- The library compiles far enough to instantiate a FUSE 3 operations table.
+- Mount setup and teardown errors are reported clearly.
+
+Verification:
+
+```sh
+dune build @install
+```
+
+## M3: Existing Callback Parity
+
+Port every currently implemented `Fuse.operations` callback to the FUSE 3
+signature shape.
+
+Tasks:
+
+- Update `FOR_ALL_OPS`, operation closures, and callback macros in
+  `lib/Fuse_util.c`.
+- Update `lib/Fuse_bindings.idl` for any changed or removed C declarations.
+- Implement the new FUSE-3-shaped `Fuse` API.
+- Add `Fuse_compat` with the old FUSE 2 shaped operations record.
+- Replace `utime` with `utimens` in `Fuse`.
+- Bridge `Fuse_compat.utime` to `Fuse.utimens`.
+- Keep `Fuse.ml` and `Fuse.mli` synchronized.
+
+Exit criteria:
+
+- All currently exposed operations compile against FUSE 3.
+- The old API compiles through `Fuse_compat`.
+- Unsupported new parameters have documented behavior.
+- No generated camlidl output is committed.
+
+Verification:
+
+```sh
+tools/format_ocaml lib/Fuse.ml lib/Fuse.mli
+tools/format_c lib/Fuse_util.c lib/Unix_util_stubs.c
+dune build @install
+```
+
+## M4: Examples And e2e Tests
+
+Update executable examples and the e2e suite to validate the FUSE 3 binding.
+
+Tasks:
+
+- Update `example/hello.ml` and `example/fusexmp.ml` for any public API changes.
+- Update `test/e2e/testfs.ml` for any callback shape changes.
+- Update the OUnit2 client for `utimens` and any intentionally unsupported FUSE
+  3 behavior.
+- Verify smoke and full e2e runs on a host with `/dev/fuse`.
+
+Exit criteria:
+
+- `make test` passes on a FUSE-capable Linux host.
+- `make e2e` passes on a FUSE-capable Linux host.
+- The skip path still works when FUSE is unavailable.
+
+Verification:
+
+```sh
+dune build @install
+make test
+make e2e
+OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test
+```
+
+## M5: Documentation And Release Preparation
+
+Update user and agent documentation to describe the completed FUSE 3 binding.
+
+Tasks:
+
+- Update `README.md` requirements and breaking changes.
+- Update `docs/bindings.md` from libfuse 2 to libfuse 3.
+- Update `AGENTS.md` project summary and binding workflow.
+- Update package synopsis or descriptions if package names change.
+- Archive this plan after implementation is complete.
+
+Exit criteria:
+
+- Documentation describes the current code rather than the migration process.
+- Release notes identify public API changes, package changes, and runtime
+  behavior.
+
+Verification:
+
+```sh
+rg -n "libfuse 2|FUSE_USE_VERSION 26|pkg-config fuse|fuse_setup|fuse_cmd" README.md docs AGENTS.md lib
+```
+
+Any remaining matches must be intentional historical references or comments.
