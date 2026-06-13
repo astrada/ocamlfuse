@@ -1,6 +1,6 @@
 # M4 Plan: Native Examples And e2e Tests
 
-Status: planned; M4-specific decisions are closed in this plan.
+Status: complete; M4-specific decisions are closed in this plan.
 
 Depends on M3, which is complete.
 
@@ -25,27 +25,27 @@ longer be the path used by examples or the mounted e2e filesystem.
   suite.
 - Do not commit generated camlidl files.
 
-## Current M3 State
+## Starting Point
 
-M3 exposes the FUSE-3-shaped `Fuse.operations` record and the nested
-`Fuse.Fuse_compat` module. The examples and `test/e2e/testfs.ml` currently open
-`Fuse.Fuse_compat` to keep the old operation records compiling.
+At the end of M3, the binding exposed the FUSE-3-shaped `Fuse.operations`
+record and the nested `Fuse.Fuse_compat` module. The examples and
+`test/e2e/testfs.ml` opened `Fuse.Fuse_compat` to keep the old operation
+records compiling.
 
-M4 removes those compatibility opens from executable examples and mounted e2e
-code, updates callback implementations to native FUSE 3 shapes, and keeps a
+M4 removed those compatibility opens from executable examples and mounted e2e
+code, updated callback implementations to native FUSE 3 shapes, and kept a
 small compile-only compatibility target so the upgrade path remains checked.
 
-## Expected File Changes
+## Implementation Results
 
-- `example/hello.ml`
-- `example/fusexmp.ml`
-- `test/e2e/testfs.ml`
-- `test/e2e/client.ml`
-- `test/e2e/xattr_stubs.c`
-- `test/e2e/dune`
-- `test/e2e/run.sh`
-- A small compile-only compatibility source under `test/e2e/`
-- FUSE 3 planning docs as needed
+- `example/hello.ml` and `example/fusexmp.ml` use native `Fuse`.
+- `test/e2e/testfs.ml` uses native `Fuse` and the FUSE 3 callback shapes.
+- `test/e2e/client.ml` contains full-suite assertions for `utimens`
+  `UTIME_NOW`/`UTIME_OMIT` behavior and `RENAME_NOREPLACE`.
+- `test/e2e/xattr_stubs.c` provides the Linux helpers used by those assertions.
+- `test/e2e/compat_compile.ml` is the only compatibility-module check.
+- `test/e2e/run.sh` builds the test filesystem, client, and compatibility
+  compile target before running mounted tests.
 
 ## Implementation Checklist
 
@@ -119,7 +119,6 @@ small compile-only compatibility target so the upgrade path remains checked.
 The compile-only target should be intentionally small:
 
 ```ocaml
-open Fuse
 open Fuse.Fuse_compat
 
 let _ops : operations =
@@ -137,7 +136,7 @@ starting a FUSE filesystem.
 
 ## Verification
 
-Run these checks for M4:
+These checks passed for M4:
 
 ```sh
 tools/format_ocaml \
@@ -150,18 +149,27 @@ dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
 make test
 make e2e
 OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test
+git diff --check
 ```
 
-Run mounted test commands outside the sandbox on a Linux host with `/dev/fuse`
-access. The sandbox skip path can be checked separately with `make test` inside
-the sandbox when `/dev/fuse` is unavailable.
+Mounted test commands were run outside the sandbox on a Linux host with
+`/dev/fuse` access:
+
+- `make test`: passed, running the smoke suite.
+- `make e2e`: passed, running the full 9-test suite.
+- `OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test`: passed, proving the required-FUSE
+  smoke path works.
+
+The sandbox skip path was checked separately with `make test` inside the
+sandbox, where `/dev/fuse` is unavailable. It printed `SKIP` and exited
+successfully.
 
 Also check that examples and the mounted test filesystem no longer use the
 compatibility module:
 
 ```sh
-rg -n "Fuse_compat|open Fuse\\.Fuse_compat" example test/e2e/testfs.ml
+rg -n "Fuse_compat|open Fuse\\.Fuse_compat" \
+  example test/e2e/testfs.ml test/e2e/compat_compile.ml
 ```
 
-Expected result: only the compile-only compatibility target should reference
-`Fuse.Fuse_compat`.
+Result: only `test/e2e/compat_compile.ml` references `Fuse.Fuse_compat`.

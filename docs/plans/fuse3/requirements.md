@@ -33,8 +33,9 @@ The repository is partway through the libfuse 3 migration:
   nanosecond timestamp values.
 - The old FUSE 2 shaped operation record is available through nested module
   `Fuse.Fuse_compat`.
-- Existing examples and the e2e test filesystem currently compile through
-  `Fuse.Fuse_compat`; M4 updates them to the native FUSE 3 API shape.
+- Examples and the e2e test filesystem use the native FUSE 3 API shape through
+  `Fuse`.
+- `test/e2e/compat_compile.ml` keeps `Fuse.Fuse_compat` compile-covered.
 - The e2e suite mounts a test filesystem and validates the currently implemented
   callbacks.
 

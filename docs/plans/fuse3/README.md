@@ -10,8 +10,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
   skeleton.
 - `m3-plan.md`: completed plan and closed decisions for public API callback
   parity.
-- `m4-plan.md`: detailed plan and closed decisions for native examples and e2e
-  tests.
+- `m4-plan.md`: completed plan and closed decisions for native examples and
+  e2e tests.
 - `api-delta.md`: known callback and lifecycle differences that affect the
   current binding.
 - `public-api-proposal.md`: OCaml representations for FUSE 3-specific public
@@ -20,8 +20,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0, M1, M2, and M3 are complete. M4 examples and e2e migration is planned.
-Multithreaded loop support is deferred to M6 analysis.
+M0, M1, M2, M3, and M4 are complete. M5 documentation and release preparation
+is next. Multithreaded loop support is deferred to M6 analysis.
 
 ## Primary References
 

@@ -1,6 +1,5 @@
 open Unix
 open Fuse
-open Fuse.Fuse_compat
 
 let getenv_required name =
   try Sys.getenv name
@@ -57,10 +56,28 @@ let log event =
         close_out_noerr channel;
         raise exn)
 
-let store_descr fd = Unix_util.int_of_file_descr fd
-let retrieve_descr fd = Unix_util.file_descr_of_int fd
+let store_descr fd = Int64.of_int (Unix_util.int_of_file_descr fd)
+
+let retrieve_descr fd =
+  if fd < Int64.of_int min_int || fd > Int64.of_int max_int then
+    raise_unix EOVERFLOW "file handle" ""
+  else Unix_util.file_descr_of_int (Int64.to_int fd)
+
+let file_info_update_of_descr fd =
+  { default_file_info_update with fi_update_fh = Some (store_descr fd) }
+
 let file_mode mode = mode land 0o7777
 let flags_or_readonly flags = match flags with [] -> [ O_RDONLY ] | _ -> flags
+let default_entry_flags = { fill_dir_plus = false }
+
+let dir_entry entry_name =
+  {
+    entry_name;
+    entry_stats = None;
+    entry_offset = None;
+    entry_flags = default_entry_flags;
+  }
+
 let xattrs = Hashtbl.create 64
 let xattr_mutex = Mutex.create ()
 let ensure_exists _fn path = ignore (Unix.LargeFile.lstat (real_path path))
@@ -76,6 +93,17 @@ let attrs_for path =
 let missing_xattr fn path = raise (Unix_error (EUNKNOWNERR 61, fn, path))
 let list_keys table = Hashtbl.fold (fun key _value keys -> key :: keys) table []
 
+let timestamp_to_float current = function
+  | Time { tv_sec; tv_nsec } ->
+      Int64.to_float tv_sec +. (float tv_nsec /. 1_000_000_000.0)
+  | Now -> Unix.gettimeofday ()
+  | Omit -> current
+
+let rename_noreplace old_path new_path =
+  if Sys.file_exists (real_path new_path) then
+    raise_unix EEXIST "rename" new_path
+  else Unix.rename (real_path old_path) (real_path new_path)
+
 let test_operations =
   {
     init =
@@ -85,7 +113,7 @@ let test_operations =
         output_string channel "ready\n";
         close_out channel);
     getattr =
-      (fun path ->
+      (fun path _fi ->
         log "getattr";
         Unix.LargeFile.lstat (real_path path));
     readlink =
@@ -118,46 +146,53 @@ let test_operations =
         log "symlink";
         Unix.symlink target (real_path link_path));
     rename =
-      (fun old_path new_path ->
+      (fun old_path new_path flags ->
         log "rename";
-        Unix.rename (real_path old_path) (real_path new_path));
+        match flags.rename_flags_raw with
+        | 0 -> Unix.rename (real_path old_path) (real_path new_path)
+        | 1 when flags.rename_noreplace -> rename_noreplace old_path new_path
+        | _ -> raise_unix EINVAL "rename" old_path);
     link =
       (fun old_path new_path ->
         log "link";
         Unix.link (real_path old_path) (real_path new_path));
     chmod =
-      (fun path mode ->
+      (fun path mode _fi ->
         log "chmod";
         Unix.chmod (real_path path) (file_mode mode));
     chown =
-      (fun path uid gid ->
+      (fun path uid gid _fi ->
         log "chown";
         Unix.chown (real_path path) uid gid);
     truncate =
-      (fun path size ->
+      (fun path size _fi ->
         log "truncate";
         Unix.LargeFile.truncate (real_path path) size);
-    utime =
-      (fun path atime mtime ->
-        log "utime";
-        Unix.utimes (real_path path) atime mtime);
+    utimens =
+      (fun path atime mtime _fi ->
+        log "utimens";
+        let real = real_path path in
+        let stats = Unix.LargeFile.lstat real in
+        Unix.utimes real
+          (timestamp_to_float stats.st_atime atime)
+          (timestamp_to_float stats.st_mtime mtime));
     fopen =
-      (fun path flags ->
+      (fun path fi ->
         log "fopen";
         let fd =
-          Unix.openfile (real_path path) (flags_or_readonly flags) 0o666
+          Unix.openfile (real_path path) (flags_or_readonly fi.fi_flags) 0o666
         in
-        Some (store_descr fd));
+        file_info_update_of_descr fd);
     read =
-      (fun _path buf offset fd ->
+      (fun _path buf offset fi ->
         log "read";
-        let file_descr = retrieve_descr fd in
+        let file_descr = retrieve_descr fi.fi_fh in
         ignore (Unix.LargeFile.lseek file_descr offset SEEK_SET);
         Unix_util.read file_descr buf);
     write =
-      (fun _path buf offset fd ->
+      (fun _path buf offset fi ->
         log "write";
-        let file_descr = retrieve_descr fd in
+        let file_descr = retrieve_descr fi.fi_fh in
         ignore (Unix.LargeFile.lseek file_descr offset SEEK_SET);
         Unix_util.write file_descr buf);
     statfs =
@@ -165,17 +200,17 @@ let test_operations =
         log "statfs";
         Unix_util.statvfs (real_path path));
     flush =
-      (fun _path _fd ->
+      (fun _path _fi ->
         log "flush";
         ());
     release =
-      (fun _path _flags fd ->
+      (fun _path fi ->
         log "release";
-        Unix.close (retrieve_descr fd));
+        Unix.close (retrieve_descr fi.fi_fh));
     fsync =
-      (fun _path _isdatasync fd ->
+      (fun _path _isdatasync fi ->
         log "fsync";
-        Unix.fsync (retrieve_descr fd));
+        Unix.fsync (retrieve_descr fi.fi_fh));
     setxattr =
       (fun path attr value flag ->
         log "setxattr";
@@ -209,22 +244,25 @@ let test_operations =
             if Hashtbl.mem attrs attr then Hashtbl.remove attrs attr
             else missing_xattr "removexattr" path));
     opendir =
-      (fun path flags ->
+      (fun path fi ->
         log "opendir";
-        let fd = Unix.openfile (real_path path) (flags_or_readonly flags) 0 in
-        Some (store_descr fd));
+        let fd =
+          Unix.openfile (real_path path) (flags_or_readonly fi.fi_flags) 0
+        in
+        file_info_update_of_descr fd);
     readdir =
-      (fun path _fd ->
+      (fun path _offset _fi _flags ->
         log "readdir";
-        "." :: ".." :: Array.to_list (Sys.readdir (real_path path)));
+        List.map dir_entry
+          ("." :: ".." :: Array.to_list (Sys.readdir (real_path path))));
     releasedir =
-      (fun _path _flags fd ->
+      (fun _path fi ->
         log "releasedir";
-        Unix.close (retrieve_descr fd));
+        Unix.close (retrieve_descr fi.fi_fh));
     fsyncdir =
-      (fun _path _isdatasync fd ->
+      (fun _path _isdatasync fi ->
         log "fsyncdir";
-        Unix.fsync (retrieve_descr fd));
+        Unix.fsync (retrieve_descr fi.fi_fh));
   }
 
 let () = main Sys.argv test_operations

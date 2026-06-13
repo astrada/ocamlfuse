@@ -70,8 +70,10 @@ equivalent.
   the library and examples.
 - `example/`: small filesystems used as buildable examples.
 - `test/e2e/`: Linux end-to-end tests. `testfs.ml` implements a temporary
-  backing filesystem, `client.ml` contains OUnit2 assertions, `xattr_stubs.c`
-  provides Linux xattr helpers, and `run.sh` mounts, tests, and cleans up.
+  native `Fuse` backing filesystem, `client.ml` contains OUnit2 assertions,
+  `xattr_stubs.c` provides Linux xattr, timestamp, and rename helpers,
+  `compat_compile.ml` compile-checks `Fuse.Fuse_compat`, and `run.sh` mounts,
+  tests, and cleans up.
 - `tools/format_ocaml`: repository formatter wrapper for `.ml` and `.mli`
   files. It requires `ocamlformat` in `PATH`.
 - `tools/format_c`: repository formatter wrapper for `.c` and `.h` files. It

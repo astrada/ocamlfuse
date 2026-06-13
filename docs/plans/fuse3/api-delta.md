@@ -111,16 +111,20 @@ to preserve existing behavior.
 
 ## e2e Coverage Implications
 
-The existing e2e suite should remain the acceptance test for implemented
-callbacks. It will need updates for:
+The e2e suite remains the acceptance test for implemented callbacks. After M4,
+the mounted test filesystem uses native `Fuse` and covers:
 
-- FUSE 3 mount behavior and options;
-- `Fuse.utimens` and `Fuse.Fuse_compat.utime` bridging;
-- rename flags in `Fuse` and intentional nonzero-flag behavior in
-  `Fuse.Fuse_compat`;
-- readdir flags in `Fuse` and default flag behavior in `Fuse.Fuse_compat`;
-- any public API changes in the test filesystem.
+- FUSE 3 mount behavior and basic mounted I/O through the smoke suite;
+- native `Fuse.utimens`, including concrete timestamps and Linux
+  `UTIME_NOW`/`UTIME_OMIT` sentinels;
+- native rename flag decoding through `RENAME_NOREPLACE`;
+- native `readdir` callback shape and `dir_entry` results;
+- implemented file, directory, and xattr callbacks through the full suite.
 
-If compatibility wrappers ignore new FUSE 3 parameters, the e2e suite should
-also include at least one targeted test proving that unsupported non-default
-behavior fails with an intentional errno rather than accidental behavior.
+`Fuse.Fuse_compat` remains compile-covered by
+`test/e2e/compat_compile.ml`. The compatibility module is not mounted by the
+e2e suite.
+
+Future callback additions should extend the mounted native-FUSE test coverage
+and add targeted assertions for intentionally unsupported non-default behavior
+when the public API exposes it.

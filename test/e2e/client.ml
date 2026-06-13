@@ -15,6 +15,10 @@ external setxattr : string -> string -> string -> unit
 external getxattr : string -> string -> string = "ocamlfuse_e2e_getxattr"
 external listxattr : string -> string list = "ocamlfuse_e2e_listxattr"
 external removexattr : string -> string -> unit = "ocamlfuse_e2e_removexattr"
+external utimens_now_omit : string -> unit = "ocamlfuse_e2e_utimens_now_omit"
+
+external rename_noreplace : string -> string -> unit
+  = "ocamlfuse_e2e_rename_noreplace"
 
 let path name = Filename.concat mountpoint name
 
@@ -94,6 +98,13 @@ let assert_not_contains value values =
     (Printf.sprintf "did not expect %S in list" value)
     (not (List.exists (fun item -> item = value) values))
 
+let assert_unix_error expected f =
+  try
+    f ();
+    assert_failure
+      (Printf.sprintf "expected Unix_error %s" (Unix.error_message expected))
+  with Unix.Unix_error (actual, _, _) when actual = expected -> ()
+
 let is_unsupported_dir_fsync = function
   | Unix.Unix_error
       ((Unix.EINVAL | Unix.EBADF | Unix.EISDIR | Unix.EOPNOTSUPP), _, _) ->
@@ -164,7 +175,25 @@ let resize_permissions_and_times_test _ctxt =
   assert_bool "mtime should be updated"
     (abs_float (stats.Unix.LargeFile.st_mtime -. mtime) < 2.0);
   remove_if_exists file;
-  assert_events [ "truncate"; "chmod"; "chown"; "utime" ]
+  assert_events [ "truncate"; "chmod"; "chown"; "utimens" ]
+
+let utimens_sentinel_test _ctxt =
+  let file = path (prefix ^ "_utimens_sentinels.txt") in
+  remove_if_exists file;
+  write_file file "timestamps";
+  let atime = 1_100_000_001.0 in
+  let mtime = 1_100_000_002.0 in
+  Unix.utimes file atime mtime;
+  let before = Unix.LargeFile.stat file in
+  utimens_now_omit file;
+  let after = Unix.LargeFile.stat file in
+  assert_bool "atime should be updated by UTIME_NOW"
+    (after.Unix.LargeFile.st_atime > before.Unix.LargeFile.st_atime);
+  assert_bool "mtime should be preserved by UTIME_OMIT"
+    (abs_float (after.Unix.LargeFile.st_mtime -. before.Unix.LargeFile.st_mtime)
+    < 2.0);
+  remove_if_exists file;
+  assert_event "utimens"
 
 let links_and_rename_test _ctxt =
   let source = path (prefix ^ "_source.txt") in
@@ -185,6 +214,27 @@ let links_and_rename_test _ctxt =
   assert_equal "linked data" (read_file renamed);
   List.iter remove_if_exists [ hardlink; renamed; symlink ];
   assert_events [ "symlink"; "readlink"; "link"; "rename"; "unlink" ]
+
+let rename_noreplace_test _ctxt =
+  let source = path (prefix ^ "_noreplace_source.txt") in
+  let existing = path (prefix ^ "_noreplace_existing.txt") in
+  let renamed = path (prefix ^ "_noreplace_renamed.txt") in
+  List.iter remove_if_exists [ source; existing; renamed ];
+  write_file source "source";
+  write_file existing "existing";
+  (try
+     assert_unix_error Unix.EEXIST (fun () -> rename_noreplace source existing)
+   with Unix.Unix_error (Unix.ENOSYS, _, _) ->
+     skip_if true "renameat2 is not supported on this kernel");
+  assert_equal "source" (read_file source);
+  assert_equal "existing" (read_file existing);
+  remove_if_exists existing;
+  (try rename_noreplace source renamed
+   with Unix.Unix_error (Unix.ENOSYS, _, _) ->
+     skip_if true "renameat2 is not supported on this kernel");
+  assert_equal "source" (read_file renamed);
+  remove_if_exists renamed;
+  assert_event "rename"
 
 let fsyncdir_test _ctxt =
   let dir = path (prefix ^ "_fsyncdir") in
@@ -219,7 +269,9 @@ let full_tests =
     "metadata-and-directory" >:: metadata_and_directory_test;
     "file-io" >:: file_io_test;
     "resize-permissions-times" >:: resize_permissions_and_times_test;
+    "utimens-sentinels" >:: utimens_sentinel_test;
     "links-and-rename" >:: links_and_rename_test;
+    "rename-noreplace" >:: rename_noreplace_test;
     "fsyncdir" >:: fsyncdir_test;
     "xattr" >:: xattr_test;
   ]

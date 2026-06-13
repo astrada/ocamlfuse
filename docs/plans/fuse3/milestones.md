@@ -155,7 +155,7 @@ make test
 
 ## M4: Examples And e2e Tests
 
-Status: planned; M4-specific decisions closed. See `m4-plan.md`.
+Status: complete. See `m4-plan.md`.
 
 Update executable examples and the e2e suite to validate the FUSE 3 binding.
 

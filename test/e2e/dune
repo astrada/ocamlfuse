@@ -8,3 +8,7 @@
  (foreign_stubs
   (language c)
   (names xattr_stubs)))
+
+(executable
+ (name compat_compile)
+ (libraries ocamlfuse3 unix))

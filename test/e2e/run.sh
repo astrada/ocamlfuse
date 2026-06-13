@@ -17,7 +17,7 @@ esac
 
 cd "$repo_root"
 
-dune build test/e2e/testfs.exe test/e2e/client.exe
+dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
 
 skip_or_fail() {
   local message=$1

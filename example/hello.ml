@@ -1,7 +1,7 @@
 open Unix
 open LargeFile
 open Bigarray
-open Fuse.Fuse_compat
+open Fuse
 
 let default_stats = LargeFile.stat "."
 let fname = "hello"
@@ -11,7 +11,17 @@ let contents : Fuse.buffer =
   Array1.of_array Bigarray.char Bigarray.c_layout
     [| 'H'; 'e'; 'l'; 'l'; 'o'; ' '; 'w'; 'o'; 'r'; 'l'; 'd'; '!' |]
 
-let do_getattr path =
+let default_entry_flags = { fill_dir_plus = false }
+
+let dir_entry entry_name =
+  {
+    entry_name;
+    entry_stats = None;
+    entry_offset = None;
+    entry_flags = default_entry_flags;
+  }
+
+let do_getattr path _fi =
   if path = "/" then default_stats
   else if path = name then
     {
@@ -23,12 +33,13 @@ let do_getattr path =
     }
   else raise (Unix_error (ENOENT, "stat", path))
 
-let do_readdir path _ =
-  if path = "/" then [ "."; ".."; fname ]
+let do_readdir path _offset _fi _flags =
+  if path = "/" then List.map dir_entry [ "."; ".."; fname ]
   else raise (Unix_error (ENOENT, "readdir", path))
 
-let do_fopen path _flags =
-  if path = name then None else raise (Unix_error (ENOENT, "open", path))
+let do_fopen path _fi =
+  if path = name then default_file_info_update
+  else raise (Unix_error (ENOENT, "open", path))
 
 let do_read path buf ofs _ =
   if path = name then (
