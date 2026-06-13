@@ -17,6 +17,9 @@ sources instead.
 - Build the library and install metadata: `dune build @install` or `make`.
 - Build the examples: `dune build example/hello.exe example/fusexmp.exe` or
   `make example`.
+- Format tracked OCaml sources: `tools/format_ocaml`.
+- Format selected OCaml sources: `tools/format_ocaml path/to/file.ml
+  path/to/file.mli`.
 - Clean build artifacts: `dune clean` or `make clean`.
 
 There is no dedicated test suite in this repository. For non-documentation code
@@ -44,6 +47,8 @@ equivalent.
 - `lib/Unix_util.ml` and `lib/Unix_util_stubs.c`: Unix helper bindings used by
   the library and examples.
 - `example/`: small filesystems used as buildable examples.
+- `tools/format_ocaml`: repository formatter wrapper for `.ml` and `.mli`
+  files. It requires `ocamlformat` in `PATH`.
 - `docs/`: agent-oriented project documentation. Start with
   `docs/README.md`.
 
@@ -87,7 +92,9 @@ generally raise `Unix.Unix_error`, `Fuse_lib` converts them to
 ## Style
 
 - Keep edits focused and avoid unrelated reformatting.
-- Follow the existing OCaml and C formatting style.
+- Run `tools/format_ocaml` after editing OCaml source files. Pass explicit
+  `.ml` or `.mli` paths when only touched files should be formatted.
+- Follow the existing C formatting style for C sources.
 - Preserve the GPL license header when adding source files that are part of the
   library implementation.
 - Documentation files should be plain Markdown and should prefer concrete

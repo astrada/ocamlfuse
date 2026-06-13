@@ -34,6 +34,9 @@ Add OUnit2 as a test dependency. In Dune, the client executable should link
 against `ounit2`; the package metadata should declare `ounit2` with a test-only
 dependency constraint.
 
+Format new OCaml test sources with `tools/format_ocaml test/e2e/testfs.ml
+test/e2e/client.ml`.
+
 Prefer a purpose-built filesystem over `example/fusexmp.ml`. `fusexmp` passes
 FUSE paths directly to Unix calls, so it mirrors `/` and is not a safe backing
 filesystem for write tests.
