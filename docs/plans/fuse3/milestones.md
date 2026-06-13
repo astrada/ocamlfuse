@@ -2,6 +2,8 @@
 
 ## M0: Decisions And Environment
 
+Status: complete. See `m0-checks.md`.
+
 Confirm the decisions from `requirements.md` before changing code.
 
 Exit criteria:

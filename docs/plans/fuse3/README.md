@@ -3,6 +3,7 @@
 This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 - `requirements.md`: migration goals, constraints, requirements, and decisions.
+- `m0-checks.md`: completed M0 decision and environment checkpoint.
 - `api-delta.md`: known callback and lifecycle differences that affect the
   current binding.
 - `public-api-proposal.md`: proposed OCaml representations for FUSE 3-specific
