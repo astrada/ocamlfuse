@@ -5,8 +5,8 @@ high-level binding. It is based on the official libfuse high-level API docs and
 the current `lib/Fuse.ml`, `lib/Fuse.mli`, `lib/Fuse_bindings.idl`, and
 `lib/Fuse_util.c`.
 
-See `public-api-proposal.md` for the proposed OCaml representations of FUSE
-3-specific values referenced below.
+See `public-api-proposal.md` for the OCaml representations of FUSE 3-specific
+values referenced below.
 
 ## Lifecycle Delta
 
@@ -55,19 +55,19 @@ design points are:
 | Current OCaml operation | Current FUSE 2 shape | FUSE 3 shape | Initial migration policy |
 | --- | --- | --- | --- |
 | `init` | `struct fuse_conn_info *` | `struct fuse_conn_info *`, `struct fuse_config *`, returns private data | Keep `unit -> unit` in the first API; exposing conn/config can be a later additive API. |
-| `getattr` | path, stat buffer | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse_compat`. |
+| `getattr` | path, stat buffer | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse.Fuse_compat`. |
 | `readlink` | unchanged | unchanged | Preserve. |
 | `mknod` | unchanged | unchanged | Preserve. |
 | `mkdir` | unchanged | unchanged | Preserve. |
 | `unlink` | unchanged | unchanged | Preserve. |
 | `rmdir` | unchanged | unchanged | Preserve. |
 | `symlink` | unchanged | unchanged | Preserve. |
-| `rename` | old path, new path | adds `unsigned int flags` | Expose flags in `Fuse`; reject nonzero flags in `Fuse_compat` unless old callback can represent them safely. |
+| `rename` | old path, new path | adds `unsigned int flags` | Expose flags in `Fuse`; reject nonzero flags in `Fuse.Fuse_compat` unless old callback can represent them safely. |
 | `link` | unchanged | unchanged | Preserve. |
-| `chmod` | path, mode | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse_compat`. |
-| `chown` | path, uid, gid | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse_compat`. |
-| `truncate` | path, size | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse_compat`. |
-| `utime` | path, atime, mtime | removed; FUSE 3 uses `utimens` | Expose `utimens` in `Fuse`; bridge old `utime` in `Fuse_compat`. |
+| `chmod` | path, mode | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse.Fuse_compat`. |
+| `chown` | path, uid, gid | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse.Fuse_compat`. |
+| `truncate` | path, size | adds nullable `struct fuse_file_info *fi` | Expose `fi` option in `Fuse`; ignore in `Fuse.Fuse_compat`. |
+| `utime` | path, atime, mtime | removed; FUSE 3 uses `utimens` | Expose `utimens` in `Fuse`; bridge old `utime` in `Fuse.Fuse_compat`. |
 | `fopen` | path, `struct fuse_file_info *` | unchanged C callback name is still `open` | Preserve OCaml name `fopen` unless public API is redesigned. |
 | `read` | unchanged | unchanged | Preserve. |
 | `write` | unchanged | unchanged | Preserve. |
@@ -80,7 +80,7 @@ design points are:
 | `listxattr` | unchanged | unchanged | Preserve. |
 | `removexattr` | unchanged | unchanged | Preserve. |
 | `opendir` | unchanged | unchanged | Preserve. |
-| `readdir` | path, filler, offset, file info | adds `enum fuse_readdir_flags`; filler also takes fill flags | Expose readdir flags in `Fuse`; ignore request flags and pass default fill flags in `Fuse_compat`. |
+| `readdir` | path, filler, offset, file info | adds `enum fuse_readdir_flags`; filler also takes fill flags | Expose readdir flags in `Fuse`; ignore request flags and pass default fill flags in `Fuse.Fuse_compat`. |
 | `releasedir` | unchanged | unchanged | Preserve. |
 | `fsyncdir` | unchanged | unchanged | Preserve. |
 
@@ -94,7 +94,6 @@ post-migration enhancements unless required for compatibility:
 - `access`
 - `create`
 - `lock`
-- `utimens`
 - `bmap`
 - `ioctl`
 - `poll`
@@ -106,9 +105,9 @@ post-migration enhancements unless required for compatibility:
 - `lseek`
 - `statx`
 
-`utimens` is required in the new `Fuse` API because it replaces the currently
-exposed `utime` behavior. The remaining callbacks are post-migration
-enhancements unless needed to preserve existing behavior.
+`utimens` is exposed in the new `Fuse` API because it replaces the old `utime`
+behavior. The remaining callbacks are post-migration enhancements unless needed
+to preserve existing behavior.
 
 ## e2e Coverage Implications
 
@@ -116,10 +115,10 @@ The existing e2e suite should remain the acceptance test for implemented
 callbacks. It will need updates for:
 
 - FUSE 3 mount behavior and options;
-- `Fuse.utimens` and `Fuse_compat.utime` bridging;
+- `Fuse.utimens` and `Fuse.Fuse_compat.utime` bridging;
 - rename flags in `Fuse` and intentional nonzero-flag behavior in
-  `Fuse_compat`;
-- readdir flags in `Fuse` and default flag behavior in `Fuse_compat`;
+  `Fuse.Fuse_compat`;
+- readdir flags in `Fuse` and default flag behavior in `Fuse.Fuse_compat`;
 - any public API changes in the test filesystem.
 
 If compatibility wrappers ignore new FUSE 3 parameters, the e2e suite should

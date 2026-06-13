@@ -51,7 +51,7 @@ struct fuse_operation_names {
   [string,unique] char * chmod;
   [string,unique] char * chown;
   [string,unique] char * truncate;
-  [string,unique,mlname(utime)] char * utimens;
+  [string,unique] char * utimens;
   [string,unique,mlname(fopen)] char * open;
   [string,unique] char * read;
   [string,unique] char * write;

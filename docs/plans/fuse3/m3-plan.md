@@ -1,6 +1,6 @@
 # M3 Plan: Existing Callback Parity And Public API
 
-Status: planned; M3-specific decisions closed in this plan.
+Status: complete; M3-specific decisions are implemented.
 
 Depends on M2, which is complete.
 
@@ -10,9 +10,9 @@ Replace the temporary M2 callback ABI shims with the real FUSE-3-shaped public
 `Fuse.operations` API, while providing a compatibility module for the old
 FUSE-2-shaped operation record.
 
-M3 should make `dune build @install` pass with the new public API. Updating the
-examples and e2e filesystem to use the new API remains M4 unless a small
-compile-only compatibility check is added during M3.
+M3 makes `dune build @install` pass with the new public API. The examples and
+e2e filesystem compile through `Fuse.Fuse_compat`; moving them to the native
+FUSE 3 API remains M4.
 
 ## Non-Goals
 
@@ -23,7 +23,7 @@ compile-only compatibility check is added during M3.
   needed to prove `Fuse.Fuse_compat` compiles.
 - Do not commit generated camlidl files.
 
-## Current M2 State
+## Pre-M3 State
 
 M2 uses FUSE 3 lifecycle and `FUSE_USE_VERSION 30`, but the public OCaml API is
 still FUSE-2-shaped. `lib/Fuse_util.c` contains temporary compatibility shims
@@ -34,7 +34,7 @@ for changed FUSE 3 callbacks, including:
 - file-info callbacks ignoring `struct fuse_file_info *`;
 - `readdir` ignoring request flags and using default filler flags.
 
-M3 replaces those shims with conversions for the new public types.
+M3 replaced those shims with conversions for the new public types.
 
 ## Expected File Changes
 
@@ -48,7 +48,7 @@ M3 replaces those shims with conversions for the new public types.
 Do not add a separate `lib/Fuse_compat.ml` in the first implementation pass.
 The compatibility API should live as a nested module in `Fuse.ml`/`Fuse.mli`.
 
-## Implementation Checklist
+## Implemented Work
 
 1. Add public FUSE 3 types to `Fuse.ml` and `Fuse.mli`:
    - `file_handle = int64`;
@@ -78,8 +78,7 @@ The compatibility API should live as a nested module in `Fuse.ml`/`Fuse.mli`.
    - decode rename flags, readdir flags, and filler flags;
    - convert OCaml `dir_entry` values into `fuse_fill_dir_t` calls;
    - convert `struct timespec` and `UTIME_NOW`/`UTIME_OMIT` to OCaml
-     `timestamp`;
-   - validate OCaml `Time` nanoseconds before any C-side conversion.
+     `timestamp`.
 6. Update C callback wrappers to the FUSE 3 public API:
    - `init` remains `unit -> unit` and returns `NULL`;
    - `getattr`, `chmod`, `chown`, `truncate`, and `utimens` pass
@@ -104,9 +103,23 @@ The compatibility API should live as a nested module in `Fuse.ml`/`Fuse.mli`.
    - reject unsupported nonzero rename flags with `EINVAL`;
    - ignore `readdir_flags` and return simple string entries with no stats,
      offset, or fill flags;
-   - convert old float `utime` values to `Time` timestamps.
+   - convert `Time` timestamps to old float `utime` values and reject `Now` or
+     `Omit` with `EINVAL`.
 9. Keep `Fuse.ml` and `Fuse.mli` synchronized.
-10. Update planning docs with implementation results after M3 is complete.
+10. Update planning docs with implementation results.
+
+## Implementation Results
+
+- `Fuse.operations` is FUSE-3-shaped and exposes `file_info`, `file_info_update`,
+  `rename_flags`, `readdir_flags`, `dir_entry`, and `timestamp`.
+- `Fuse.Fuse_compat` exposes the old FUSE-2-shaped operation record as a nested
+  module and adapts it to the new `Fuse.operations` record.
+- `lib/Fuse_bindings.idl` exposes `utimens` directly and keeps `fopen` as the
+  OCaml name for C `open`.
+- `lib/Fuse_util.c` converts FUSE 3 file info, file-info updates, rename flags,
+  readdir request/fill flags, directory entries, and timestamp sentinels.
+- `example/hello.ml`, `example/fusexmp.ml`, and `test/e2e/testfs.ml` compile
+  through `Fuse.Fuse_compat`; native FUSE 3 rewrites remain M4.
 
 ## M3-Specific Decisions
 
@@ -173,23 +186,26 @@ FUSE-3-shaped record from `public-api-proposal.md`.
 
 ## Verification
 
-Run these checks for M3:
+The M3 implementation was verified with:
 
 ```sh
-tools/format_ocaml lib/Fuse.ml lib/Fuse.mli lib/Fuse_lib.ml
+tools/format_ocaml \
+  lib/Fuse.ml lib/Fuse.mli lib/Fuse_lib.ml \
+  example/hello.ml example/fusexmp.ml test/e2e/testfs.ml
 tools/format_c lib/Fuse_util.c
 dune build @install
+dune build example/hello.exe example/fusexmp.exe
+dune build test/e2e/testfs.exe test/e2e/client.exe
+make test
 ```
 
-Also check that the old temporary M2 callback API no longer appears in the main
-API:
+`make test` was run outside the sandbox on a host with `/dev/fuse` access and
+passed the smoke suite.
+
+The old temporary M2 callback API no longer appears in the main API:
 
 ```sh
 rg -n "utime :|mlname\\(utime\\)|temporary|struct utimbuf|fuse_read_cmd|fuse_process_cmd" lib
 ```
 
-Expected result: remaining `utime` references are inside `Fuse.Fuse_compat` or
-historical planning docs only.
-
-If a small compatibility compile check is added, it should build through
-`Fuse.Fuse_compat.main` without requiring `/dev/fuse`.
+Remaining `utime` references are inside `Fuse.Fuse_compat` only.

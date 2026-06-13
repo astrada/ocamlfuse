@@ -1,7 +1,7 @@
 open Unix
 open LargeFile
 open Bigarray
-open Fuse
+open Fuse.Fuse_compat
 
 let default_stats = LargeFile.stat "."
 let fname = "hello"

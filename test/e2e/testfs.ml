@@ -1,5 +1,6 @@
 open Unix
 open Fuse
+open Fuse.Fuse_compat
 
 let getenv_required name =
   try Sys.getenv name

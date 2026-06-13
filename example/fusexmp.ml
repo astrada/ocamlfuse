@@ -26,6 +26,7 @@
 
 open Unix
 open Fuse
+open Fuse.Fuse_compat
 
 (* Read and write operations a la fuse *)
 

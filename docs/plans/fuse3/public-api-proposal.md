@@ -162,9 +162,11 @@ utimens : string -> timestamp -> timestamp -> file_info option -> unit
 
 The first timestamp is atime and the second is mtime.
 
-`Fuse.Fuse_compat.utime : string -> float -> float -> unit` should convert
-floats to `Time { tv_sec; tv_nsec }`, documenting that the compatibility path
-may lose precision compared with direct `Fuse.utimens` usage.
+`Fuse.Fuse_compat` should call the old
+`utime : string -> float -> float -> unit` callback when both FUSE 3 timestamps
+are concrete `Time` values. It should reject `Now` or `Omit` with `EINVAL`
+because the old callback cannot represent timestamp sentinels. The compatibility
+path may lose precision compared with direct `Fuse.utimens` usage.
 
 ## First API Surface Sketch
 

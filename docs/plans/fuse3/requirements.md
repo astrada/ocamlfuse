@@ -28,8 +28,13 @@ The repository is partway through the libfuse 3 migration:
 - `lib/Fuse_util.c` uses a manual FUSE 3 high-level lifecycle with
   `fuse_new`, `fuse_mount`, `fuse_daemonize`, signal handlers, `fuse_loop`,
   `fuse_unmount`, and `fuse_destroy`.
-- The public OCaml API still exposes a FUSE 2 shaped `Fuse.operations` record,
-  with temporary FUSE 3 C ABI shims until M3.
+- The public OCaml API exposes a FUSE-3-shaped `Fuse.operations` record with
+  FUSE 3 file info, rename flags, readdir flags, directory entries, and
+  nanosecond timestamp values.
+- The old FUSE 2 shaped operation record is available through nested module
+  `Fuse.Fuse_compat`.
+- Existing examples and the e2e test filesystem currently compile through
+  `Fuse.Fuse_compat`; M4 updates them to the native FUSE 3 API shape.
 - The e2e suite mounts a test filesystem and validates the currently implemented
   callbacks.
 
@@ -79,16 +84,18 @@ The repository is partway through the libfuse 3 migration:
 - The main public API should be FUSE-3-shaped. OCaml callbacks should expose
   FUSE 3 concepts where practical, including file info, rename flags, readdir
   flags, and nanosecond timestamps.
-- Add a `Fuse_compat` module that exposes the old FUSE 2 shaped API on top of
-  libfuse 3 to ease upgrades for existing users.
-- The default assumption is that module `Fuse` becomes the FUSE 3 API and
-  module `Fuse_compat` provides the old `Fuse.operations` shape.
+- Add a nested `Fuse.Fuse_compat` module that exposes the old FUSE 2 shaped API
+  on top of libfuse 3 to ease upgrades for existing users.
+- Module `Fuse` is the FUSE 3 API and nested module `Fuse.Fuse_compat` provides
+  the old `Fuse.operations` shape.
 - The OCaml top-level module name remains `Fuse` for the FUSE 3 API.
 - Public API changes must update both `lib/Fuse.ml` and `lib/Fuse.mli`.
 - `Fuse` must expose `utimens`, because FUSE 3 no longer exposes the old
   `utime` callback.
-- `Fuse_compat` should bridge the old `utime : string -> float -> float -> unit`
-  callback to `utimens`, with documented precision loss.
+- `Fuse.Fuse_compat` bridges the old
+  `utime : string -> float -> float -> unit` callback to `utimens`, with
+  documented precision loss and `EINVAL` for timestamp sentinels that old
+  `utime` cannot represent.
 - Any ignored FUSE 3 parameter must have a documented policy. Examples:
   - ignore nullable `struct fuse_file_info *fi` for compatibility wrappers;
   - return `EINVAL` or `ENOSYS` for unsupported nonzero rename flags;
@@ -146,12 +153,12 @@ The repository is partway through the libfuse 3 migration:
 - The local conf package name is `conf-libfuse3`.
 - The main public API should be FUSE-3-shaped.
 - The OCaml top-level module name remains `Fuse` for the FUSE 3 API.
-- A `Fuse_compat` module should provide the old FUSE 2 shaped API on top of
-  libfuse 3 for upgrade compatibility.
+- The nested `Fuse.Fuse_compat` module provides the old FUSE 2 shaped API on
+  top of libfuse 3 for upgrade compatibility.
 - The first public API includes only callbacks needed to replace current
   behavior.
 
-## Proposed Design Details
+## API Design Details
 
-See `public-api-proposal.md` for proposed OCaml representations of
+See `public-api-proposal.md` for OCaml representations of
 `struct fuse_file_info`, rename flags, readdir flags, and `struct timespec`.

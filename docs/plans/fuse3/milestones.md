@@ -10,7 +10,8 @@ Exit criteria:
 
 - Minimum libfuse 3 version is selected: `3.10`.
 - `FUSE_USE_VERSION` target is selected: `30`.
-- Public API strategy is selected: FUSE-3-shaped `Fuse` plus `Fuse_compat`.
+- Public API strategy is selected: FUSE-3-shaped `Fuse` plus
+  `Fuse.Fuse_compat`.
 - FUSE 3 only versus dual FUSE 2/FUSE 3 support is decided: FUSE 3 only.
 - Package naming is decided: `ocamlfuse3`.
 - Conf package naming is decided: `conf-libfuse3`.
@@ -104,8 +105,8 @@ Exit criteria:
 
 - `dune build @install` passes against libfuse 3.
 - Mount setup and teardown errors are reported clearly.
-- Public FUSE-3-shaped `Fuse.operations` and `Fuse_compat` remain explicitly
-  deferred to M3.
+- Public FUSE-3-shaped `Fuse.operations` and `Fuse.Fuse_compat` remain
+  explicitly deferred to M3.
 
 Verification:
 
@@ -117,7 +118,7 @@ dune build @install
 
 ## M3: Existing Callback Parity
 
-Status: planned; M3-specific decisions closed. See `m3-plan.md`.
+Status: complete. See `m3-plan.md`.
 
 Port every currently implemented `Fuse.operations` callback to the FUSE 3
 signature shape.
@@ -143,9 +144,13 @@ Exit criteria:
 Verification:
 
 ```sh
-tools/format_ocaml lib/Fuse.ml lib/Fuse.mli
-tools/format_c lib/Fuse_util.c lib/Unix_util_stubs.c
+tools/format_ocaml \
+  lib/Fuse.ml lib/Fuse.mli lib/Fuse_lib.ml \
+  example/hello.ml example/fusexmp.ml test/e2e/testfs.ml
+tools/format_c lib/Fuse_util.c
 dune build @install
+dune build example/hello.exe example/fusexmp.exe
+make test
 ```
 
 ## M4: Examples And e2e Tests

@@ -11,9 +11,9 @@ internal Dune library name remains `fuse`.
 
 The lifecycle implementation targets FUSE 3 with `FUSE_USE_VERSION 30` and a
 manual high-level `fuse_new`/`fuse_mount`/`fuse_loop` integration. The public
-OCaml callback API is still the old FUSE-2-shaped `Fuse.operations` record,
-with temporary C compatibility shims. The FUSE-3-shaped public API and
-`Fuse_compat` module are planned in `docs/plans/fuse3/` M3.
+OCaml callback API is FUSE-3-shaped. The old FUSE-2-shaped callback record is
+available through the nested `Fuse.Fuse_compat` module for upgrade
+compatibility.
 
 The binding layer is generated with camlidl and completed by hand-written OCaml
 and C glue. Treat the generated binding files as build artifacts and edit their
@@ -44,7 +44,7 @@ builds the e2e test binaries, then runs the smoke test when FUSE is available.
 If FUSE is unavailable, it prints `SKIP` and exits successfully. Set
 `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a failure.
 
-The e2e tests (`make test`, `make e2e`) should be run outside the sanbox,
+The e2e tests (`make test`, `make e2e`) should be run outside the sandbox,
 because inside the sandbox `/dev/fuse` is not accessible.
 
 Running the examples mounts FUSE filesystems and requires a working libfuse
@@ -64,7 +64,8 @@ equivalent.
 - `lib/Fuse.ml` and `lib/Fuse.mli`: public OCaml API.
 - `lib/Fuse_lib.ml`: callback registration helpers.
 - `lib/Fuse_util.c`: hand-written C glue between FUSE callbacks and OCaml
-  callbacks.
+  callbacks, including FUSE 3 file-info, rename, readdir, and timestamp
+  conversions.
 - `lib/Unix_util.ml` and `lib/Unix_util_stubs.c`: Unix helper bindings used by
   the library and examples.
 - `example/`: small filesystems used as buildable examples.
@@ -96,7 +97,8 @@ surfaces in lockstep:
 - `lib/Fuse_bindings.idl` for the operation-name structure and external
   declarations.
 - `lib/Fuse.ml` and `lib/Fuse.mli` for the public `operations` record,
-  `default_operations`, and `op_names_of_operations`.
+  `default_operations`, `op_names_of_operations`, and any `Fuse.Fuse_compat`
+  wrapper behavior.
 - `lib/Fuse_util.c` for `FOR_ALL_OPS`, closure storage, callback argument
   conversion, result conversion, and the `struct fuse_operations` assignment.
 - Examples and documentation when the public API changes.

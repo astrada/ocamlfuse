@@ -11,7 +11,8 @@ libfuse 3 high-level lifecycle while keeping the public OCaml API otherwise
 stable until M3.
 
 M2 should make the library build against libfuse 3. It should not complete the
-FUSE-3-shaped public API or the `Fuse_compat` module; those remain M3 work.
+FUSE-3-shaped public API or the `Fuse.Fuse_compat` module; those remain M3
+work.
 
 ## Failures At M1
 
@@ -94,7 +95,7 @@ and runtime-lock boundaries explicit.
      and returning `-EINVAL` for `UTIME_NOW` or `UTIME_OMIT`.
 7. Keep the M3 boundary explicit:
    - do not add the final FUSE-3-shaped `Fuse.operations` record in M2;
-   - do not add `Fuse_compat` in M2;
+   - do not add `Fuse.Fuse_compat` in M2;
    - document every ignored FUSE 3 callback parameter as temporary.
 
 ## Accepted Decisions
@@ -127,7 +128,7 @@ and runtime-lock boundaries explicit.
 
 - M2 bridges old `utime` through FUSE 3 `utimens` as a temporary compatibility
   shim. M3 replaces this with the real `Fuse.utimens` API and
-  `Fuse_compat.utime` bridge.
+  `Fuse.Fuse_compat.utime` bridge.
 
 - M2 setup failures raise OCaml exceptions instead of returning silently. Keep
   the public `unit` return type, but raise `Failure` with a clear

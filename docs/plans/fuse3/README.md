@@ -8,18 +8,18 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
   changes.
 - `m2-plan.md`: detailed plan and accepted decisions for the FUSE 3 lifecycle
   skeleton.
-- `m3-plan.md`: detailed plan and closed decisions for public API callback
+- `m3-plan.md`: completed plan and closed decisions for public API callback
   parity.
 - `api-delta.md`: known callback and lifecycle differences that affect the
   current binding.
-- `public-api-proposal.md`: proposed OCaml representations for FUSE 3-specific
-  public API values.
+- `public-api-proposal.md`: OCaml representations for FUSE 3-specific public
+  API values.
 - `milestones.md`: staged implementation plan with exit criteria.
 
 ## Status
 
-M0, M1, and M2 are complete. M3 public API migration is planned. Multithreaded
-loop support is deferred to M6 analysis.
+M0, M1, M2, and M3 are complete. M4 examples and e2e migration is next.
+Multithreaded loop support is deferred to M6 analysis.
 
 ## Primary References
 

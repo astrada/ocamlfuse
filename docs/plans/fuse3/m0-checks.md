@@ -14,8 +14,8 @@ Checked on 2026-06-13.
 | Dune/opam package name | `ocamlfuse3` |
 | Conf package name | `conf-libfuse3` |
 | Main OCaml module | `Fuse` |
-| Compatibility module | `Fuse_compat` |
-| Public API shape | FUSE-3-shaped `Fuse`, old API via `Fuse_compat` |
+| Compatibility module | `Fuse.Fuse_compat` |
+| Public API shape | FUSE-3-shaped `Fuse`, old API via `Fuse.Fuse_compat` |
 | Initial callback scope | Only callbacks needed to replace current behavior |
 
 ## Environment Checks

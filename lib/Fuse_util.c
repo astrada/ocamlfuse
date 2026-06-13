@@ -62,6 +62,18 @@
 
 #define min(a, b) (a < b ? a : b)
 
+#ifndef RENAME_NOREPLACE
+#define RENAME_NOREPLACE (1 << 0)
+#endif
+
+#ifndef RENAME_EXCHANGE
+#define RENAME_EXCHANGE (1 << 1)
+#endif
+
+#ifndef RENAME_WHITEOUT
+#define RENAME_WHITEOUT (1 << 2)
+#endif
+
 CAMLprim value callback4(value closure, value arg1, value arg2, value arg3,
                          value arg4) {
   CAMLparam5(closure, arg1, arg2, arg3, arg4);
@@ -290,7 +302,117 @@ void ml2c_Unix_struct_statvfs(value v, struct statvfs *st) {
   CAMLreturn0;
   /* TODO: check the meaning of the following missing field:
      __f_spare
-   */
+  */
+}
+
+static value make_some(value v) {
+  CAMLparam1(v);
+  CAMLlocal1(vres);
+  vres = caml_alloc(1, 0);
+  Store_field(vres, 0, v);
+  CAMLreturn(vres);
+}
+
+static value c2ml_file_info(const struct fuse_file_info *fi) {
+  CAMLparam0();
+  CAMLlocal1(vres);
+
+  vres = caml_alloc(13, 0);
+  Store_field(vres, 0, c_flags_to_open_flag_list(fi->flags));
+  Store_field(vres, 1, Val_int(fi->flags));
+  Store_field(vres, 2, caml_copy_int64((int64_t)fi->fh));
+  Store_field(vres, 3, Val_bool(fi->writepage));
+  Store_field(vres, 4, Val_bool(fi->direct_io));
+  Store_field(vres, 5, Val_bool(fi->keep_cache));
+  Store_field(vres, 6, Val_bool(fi->flush));
+  Store_field(vres, 7, Val_bool(fi->nonseekable));
+  Store_field(vres, 8, Val_bool(fi->flock_release));
+  Store_field(vres, 9, Val_bool(fi->cache_readdir));
+  Store_field(vres, 10, Val_bool(fi->noflush));
+  Store_field(vres, 11, caml_copy_int64((int64_t)fi->lock_owner));
+  Store_field(vres, 12, caml_copy_int32((int32_t)fi->poll_events));
+  CAMLreturn(vres);
+}
+
+static value c2ml_file_info_option(const struct fuse_file_info *fi) {
+  CAMLparam0();
+  CAMLlocal1(vfi);
+
+  if (fi == NULL)
+    CAMLreturn(Val_int(0));
+
+  vfi = c2ml_file_info(fi);
+  CAMLreturn(make_some(vfi));
+}
+
+static void ml2c_file_info_update(struct fuse_file_info *fi, value vupdate,
+                                  int is_dir) {
+  CAMLparam1(vupdate);
+  value vfh;
+
+  if (fi == NULL)
+    CAMLreturn0;
+
+  vfh = Field(vupdate, 0);
+  if (Is_block(vfh))
+    fi->fh = (uint64_t)Int64_val(Field(vfh, 0));
+
+  if (is_dir) {
+    fi->cache_readdir = Bool_val(Field(vupdate, 4));
+  } else {
+    fi->direct_io = Bool_val(Field(vupdate, 1));
+    fi->keep_cache = Bool_val(Field(vupdate, 2));
+    fi->nonseekable = Bool_val(Field(vupdate, 3));
+    fi->noflush = Bool_val(Field(vupdate, 5));
+  }
+
+  CAMLreturn0;
+}
+
+static value c2ml_rename_flags(unsigned int flags) {
+  CAMLparam0();
+  CAMLlocal1(vres);
+
+  vres = caml_alloc(4, 0);
+  Store_field(vres, 0, Val_bool(flags & RENAME_NOREPLACE));
+  Store_field(vres, 1, Val_bool(flags & RENAME_EXCHANGE));
+  Store_field(vres, 2, Val_bool(flags & RENAME_WHITEOUT));
+  Store_field(vres, 3, Val_int(flags));
+  CAMLreturn(vres);
+}
+
+static value c2ml_readdir_flags(enum fuse_readdir_flags flags) {
+  CAMLparam0();
+  CAMLlocal1(vres);
+
+  vres = caml_alloc(2, 0);
+  Store_field(vres, 0, Val_bool(flags & FUSE_READDIR_PLUS));
+  Store_field(vres, 1, Val_int(flags));
+  CAMLreturn(vres);
+}
+
+static value c2ml_timestamp(const struct timespec *tv) {
+  CAMLparam0();
+  CAMLlocal2(vtimespec, vres);
+
+  if (tv->tv_nsec == UTIME_NOW)
+    CAMLreturn(Val_int(0));
+  if (tv->tv_nsec == UTIME_OMIT)
+    CAMLreturn(Val_int(1));
+
+  vtimespec = caml_alloc(2, 0);
+  Store_field(vtimespec, 0, caml_copy_int64((int64_t)tv->tv_sec));
+  Store_field(vtimespec, 1, Val_int(tv->tv_nsec));
+  vres = caml_alloc(1, 0);
+  Store_field(vres, 0, vtimespec);
+  CAMLreturn(vres);
+}
+
+static enum fuse_fill_dir_flags ml2c_fill_dir_flags(value vflags) {
+  enum fuse_fill_dir_flags flags = 0;
+  if (Bool_val(Field(vflags, 0)))
+    flags |= FUSE_FILL_DIR_PLUS;
+  return flags;
 }
 
 #define FOR_ALL_NON_INIT_OPS(MACRO)                                            \
@@ -358,30 +480,49 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define getattr_CALL_ARGS (path, buf, fi)
 #define getattr_RTYPE int
 #define getattr_CB                                                             \
-  (void)fi;                                                                    \
   if (path == NULL) {                                                          \
     vres = make_bad_unix_error(EINVAL);                                        \
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
-    vres = caml_callback(*getattr_closure, vpath);                             \
+    vfi = c2ml_file_info_option(fi);                                           \
+    vres = caml_callback2(*getattr_closure, vpath, vfi);                       \
   }
 #define getattr_RES ml2c_Unix_stats_struct_stat(Field(vres, 0), buf);
 
-/* TODO: allow ocaml to use the offset and the stat argument of the filler */
 #define readdir_ARGS                                                           \
   (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset,          \
    struct fuse_file_info *info, enum fuse_readdir_flags flags)
 #define readdir_CALL_ARGS (path, buf, filler, offset, info, flags)
 #define readdir_RTYPE int
 #define readdir_CB                                                             \
-  (void)offset;                                                                \
-  (void)flags;                                                                 \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*readdir_closure, vpath, Val_int(info ? info->fh : 0));
+  if (path == NULL || info == NULL) {                                          \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(info);                                                \
+    vflags = c2ml_readdir_flags(flags);                                        \
+    vres = callback4(*readdir_closure, vpath, caml_copy_int64(offset), vfi,    \
+                     vflags);                                                  \
+  }
 #define readdir_RES                                                            \
   vtmp = Field(vres, 0);                                                       \
   while (Is_block(vtmp)) {                                                     \
-    if (filler(buf, String_val(Field(vtmp, 0)), NULL, 0, 0))                   \
+    struct stat stbuf;                                                         \
+    struct stat *stbuf_ptr = NULL;                                             \
+    off_t entry_offset = 0;                                                    \
+    enum fuse_fill_dir_flags entry_flags;                                      \
+    ventry = Field(vtmp, 0);                                                   \
+    vstat = Field(ventry, 1);                                                  \
+    if (Is_block(vstat)) {                                                     \
+      ml2c_Unix_stats_struct_stat(Field(vstat, 0), &stbuf);                    \
+      stbuf_ptr = &stbuf;                                                      \
+    }                                                                          \
+    voffset = Field(ventry, 2);                                                \
+    if (Is_block(voffset))                                                     \
+      entry_offset = (off_t)Int64_val(Field(voffset, 0));                      \
+    entry_flags = ml2c_fill_dir_flags(Field(ventry, 3));                       \
+    if (filler(buf, String_val(Field(ventry, 0)), stbuf_ptr, entry_offset,     \
+               entry_flags))                                                   \
       break;                                                                   \
     if (res != 0)                                                              \
       break;                                                                   \
@@ -441,12 +582,13 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define rename_CALL_ARGS (path, dest, flags)
 #define rename_RTYPE int
 #define rename_CB                                                              \
-  if (flags != 0) {                                                            \
+  if (path == NULL || dest == NULL) {                                          \
     vres = make_bad_unix_error(EINVAL);                                        \
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vtmp = caml_copy_string(dest);                                             \
-    vres = caml_callback2(*rename_closure, vpath, vtmp);                       \
+    vflags = c2ml_rename_flags(flags);                                         \
+    vres = caml_callback3(*rename_closure, vpath, vtmp, vflags);               \
   }
 #define rename_RES
 
@@ -463,12 +605,12 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define chmod_CALL_ARGS (path, mode, fi)
 #define chmod_RTYPE int
 #define chmod_CB                                                               \
-  (void)fi;                                                                    \
   if (path == NULL) {                                                          \
     vres = make_bad_unix_error(EINVAL);                                        \
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
-    vres = caml_callback2(*chmod_closure, vpath, Val_int(mode));               \
+    vfi = c2ml_file_info_option(fi);                                           \
+    vres = caml_callback3(*chmod_closure, vpath, Val_int(mode), vfi);          \
   }
 #define chmod_RES
 
@@ -477,12 +619,12 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define chown_CALL_ARGS (path, uid, gid, fi)
 #define chown_RTYPE int
 #define chown_CB                                                               \
-  (void)fi;                                                                    \
   if (path == NULL) {                                                          \
     vres = make_bad_unix_error(EINVAL);                                        \
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
-    vres = caml_callback3(*chown_closure, vpath, Val_int(uid), Val_int(gid));  \
+    vfi = c2ml_file_info_option(fi);                                           \
+    vres = callback4(*chown_closure, vpath, Val_int(uid), Val_int(gid), vfi);  \
   }
 #define chown_RES
 
@@ -490,12 +632,13 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define truncate_CALL_ARGS (path, size, fi)
 #define truncate_RTYPE int
 #define truncate_CB                                                            \
-  (void)fi;                                                                    \
   if (path == NULL) {                                                          \
     vres = make_bad_unix_error(EINVAL);                                        \
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
-    vres = caml_callback2(*truncate_closure, vpath, caml_copy_int64(size));    \
+    vfi = c2ml_file_info_option(fi);                                           \
+    vres =                                                                     \
+        caml_callback3(*truncate_closure, vpath, caml_copy_int64(size), vfi);  \
   }
 #define truncate_RES
 
@@ -504,20 +647,14 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define utimens_CALL_ARGS (path, tv, fi)
 #define utimens_RTYPE int
 #define utimens_CB                                                             \
-  (void)fi;                                                                    \
   if (path == NULL) {                                                          \
-    vres = make_bad_unix_error(EINVAL);                                        \
-  } else if (tv[0].tv_nsec == UTIME_NOW || tv[0].tv_nsec == UTIME_OMIT ||      \
-             tv[1].tv_nsec == UTIME_NOW || tv[1].tv_nsec == UTIME_OMIT) {      \
     vres = make_bad_unix_error(EINVAL);                                        \
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
-    vres = caml_callback3(                                                     \
-        *utimens_closure, vpath,                                               \
-        caml_copy_double((double)tv[0].tv_sec +                                \
-                         ((double)tv[0].tv_nsec / 1000000000.0)),              \
-        caml_copy_double((double)tv[1].tv_sec +                                \
-                         ((double)tv[1].tv_nsec / 1000000000.0)));             \
+    vtmp = c2ml_timestamp(&tv[0]);                                             \
+    vtmp2 = c2ml_timestamp(&tv[1]);                                            \
+    vfi = c2ml_file_info_option(fi);                                           \
+    vres = callback4(*utimens_closure, vpath, vtmp, vtmp2, vfi);               \
   }
 #define utimens_RES
 
@@ -525,23 +662,27 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define open_CALL_ARGS (path, fi)
 #define open_RTYPE int
 #define open_CB                                                                \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*open_closure, vpath,                                  \
-                        c_flags_to_open_flag_list(fi->flags));
-#define open_RES                                                               \
-  if (Field(vres, 0) != Val_int(0))                                            \
-    fi->fh = Int_val(Field(Field(vres, 0), 0));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = caml_callback2(*open_closure, vpath, vfi);                          \
+  }
+#define open_RES ml2c_file_info_update(fi, Field(vres, 0), 0);
 
 #define opendir_ARGS (const char *path, struct fuse_file_info *fi)
 #define opendir_CALL_ARGS (path, fi)
 #define opendir_RTYPE int
 #define opendir_CB                                                             \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*opendir_closure, vpath,                               \
-                        c_flags_to_open_flag_list(fi->flags));
-#define opendir_RES                                                            \
-  if (Field(vres, 0) != Val_int(0))                                            \
-    fi->fh = Int_val(Field(Field(vres, 0), 0));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = caml_callback2(*opendir_closure, vpath, vfi);                       \
+  }
+#define opendir_RES ml2c_file_info_update(fi, Field(vres, 0), 1);
 
 #define read_ARGS                                                              \
   (const char *path, char *buf, size_t size, off_t offset,                     \
@@ -549,11 +690,16 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define read_CALL_ARGS (path, buf, size, offset, fi)
 #define read_RTYPE int
 #define read_CB                                                                \
-  vpath = caml_copy_string(path);                                              \
-  vres = callback4(                                                            \
-      *read_closure, vpath,                                                    \
-      caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, buf, size),      \
-      caml_copy_int64(offset), Val_int(fi->fh));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = callback4(                                                          \
+        *read_closure, vpath,                                                  \
+        caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, buf, size),    \
+        caml_copy_int64(offset), vfi);                                         \
+  }
 #define read_RES res = Int_val(Field(vres, 0));
 
 #define write_ARGS                                                             \
@@ -563,39 +709,55 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define write_CALL_ARGS (path, buf, size, offset, fi)
 #define write_RTYPE int
 #define write_CB                                                               \
-  vpath = caml_copy_string(path);                                              \
-  vres = callback4(*write_closure, vpath,                                      \
-                   caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1,     \
-                                      (char *)buf, size),                      \
-                   caml_copy_int64(offset), Val_int(fi->fh));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = callback4(*write_closure, vpath,                                    \
+                     caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1,   \
+                                        (char *)buf, size),                    \
+                     caml_copy_int64(offset), vfi);                            \
+  }
 #define write_RES res = Int_val(Field(vres, 0));
 
 #define release_ARGS (const char *path, struct fuse_file_info *fi)
 #define release_CALL_ARGS (path, fi)
 #define release_RTYPE int
 #define release_CB                                                             \
-  vpath = caml_copy_string(path);                                              \
-  vres =                                                                       \
-      caml_callback3(*release_closure, vpath,                                  \
-                     c_flags_to_open_flag_list(fi->flags), Val_int(fi->fh));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = caml_callback2(*release_closure, vpath, vfi);                       \
+  }
 #define release_RES
 
 #define releasedir_ARGS (const char *path, struct fuse_file_info *fi)
 #define releasedir_CALL_ARGS (path, fi)
 #define releasedir_RTYPE int
 #define releasedir_CB                                                          \
-  vpath = caml_copy_string(path);                                              \
-  vres =                                                                       \
-      caml_callback3(*releasedir_closure, vpath,                               \
-                     c_flags_to_open_flag_list(fi->flags), Val_int(fi->fh));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = caml_callback2(*releasedir_closure, vpath, vfi);                    \
+  }
 #define releasedir_RES
 
 #define flush_ARGS (const char *path, struct fuse_file_info *fi)
 #define flush_CALL_ARGS (path, fi)
 #define flush_RTYPE int
 #define flush_CB                                                               \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*flush_closure, vpath, Val_int(fi->fh));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = caml_callback2(*flush_closure, vpath, vfi);                         \
+  }
 #define flush_RES
 
 #define statfs_ARGS (const char *path, struct statvfs *stbuf)
@@ -610,9 +772,13 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define fsync_CALL_ARGS (path, isdatasync, fi)
 #define fsync_RTYPE int
 #define fsync_CB                                                               \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback3(*fsync_closure, vpath, Val_bool(isdatasync),           \
-                        Val_int(fi->fh));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres = caml_callback3(*fsync_closure, vpath, Val_bool(isdatasync), vfi);   \
+  }
 #define fsync_RES
 
 #define fsyncdir_ARGS                                                          \
@@ -620,9 +786,14 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define fsyncdir_CALL_ARGS (path, isdatasync, fi)
 #define fsyncdir_RTYPE int
 #define fsyncdir_CB                                                            \
-  vpath = caml_copy_string(path);                                              \
-  vres = caml_callback3(*fsyncdir_closure, vpath, Val_bool(isdatasync),        \
-                        Val_int(fi->fh));
+  if (path == NULL || fi == NULL) {                                            \
+    vres = make_bad_unix_error(EINVAL);                                        \
+  } else {                                                                     \
+    vpath = caml_copy_string(path);                                            \
+    vfi = c2ml_file_info(fi);                                                  \
+    vres =                                                                     \
+        caml_callback3(*fsyncdir_closure, vpath, Val_bool(isdatasync), vfi);   \
+  }
 #define fsyncdir_RES
 
 #define setxattr_ARGS                                                          \
@@ -713,7 +884,8 @@ static void *ops_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
 #define CALLBACK(OPNAME)                                                       \
   static OPNAME##_RTYPE gm281_ops_##OPNAME OPNAME##_ARGS {                     \
     CAMLparam0();                                                              \
-    CAMLlocal4(vstring, vpath, vres, vtmp);                                    \
+    CAMLlocal5(vstring, vpath, vres, vtmp, vtmp2);                             \
+    CAMLlocal5(vfi, vflags, ventry, vstat, voffset);                           \
     OPNAME##_RTYPE res = (typeof(res))-1L;                                     \
     OPNAME##_CB if (Tag_val(vres) == 1) /* Result is not Bad */                \
     {                                                                          \
