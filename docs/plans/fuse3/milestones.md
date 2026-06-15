@@ -356,7 +356,7 @@ make e2e
 
 ## M9: Rename Public Package To `fuse3`
 
-Status: planned. See `m9-plan.md`.
+Status: complete. See `m9-plan.md`.
 
 Rename the public Dune library and opam package from `ocamlfuse3` to `fuse3`
 while keeping the OCaml module name `Fuse`, the internal Dune library name

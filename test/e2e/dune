@@ -1,14 +1,14 @@
 (executable
  (name testfs)
- (libraries ocamlfuse3 unix threads bigarray))
+ (libraries fuse3 unix threads bigarray))
 
 (executable
  (name client)
- (libraries ocamlfuse3 unix ounit2)
+ (libraries fuse3 unix ounit2)
  (foreign_stubs
   (language c)
   (names xattr_stubs)))
 
 (executable
  (name compat_compile)
- (libraries ocamlfuse3 unix))
+ (libraries fuse3 unix))

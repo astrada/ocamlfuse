@@ -20,7 +20,7 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
   libfuse's `fuse_loop_mt` and OCaml foreign-thread registration.
 - `m8-plan.md`: completed cleanup pass for stale migration leftovers, package
   metadata, dead code, comments, and documentation consistency.
-- `m9-plan.md`: planned public package rename from `ocamlfuse3` to `fuse3`.
+- `m9-plan.md`: completed public package rename from `ocamlfuse3` to `fuse3`.
 - `ocaml-libfuse3-bindings.md`: supplemental external-analysis notes about
   libfuse-created threads and OCaml runtime registration.
 - `api-delta.md`: known callback and lifecycle differences that affect the
@@ -31,7 +31,7 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0 through M8 are complete. M9 is planned.
+M0 through M9 are complete.
 
 ## Primary References
 

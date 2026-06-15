@@ -1,6 +1,6 @@
 (library
  (name fuse)
- (public_name ocamlfuse3)
+ (public_name fuse3)
  (libraries unix threads bigarray camlidl)
  (flags -thread)
  (foreign_stubs

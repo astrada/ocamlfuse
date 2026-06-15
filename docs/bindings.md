@@ -1,6 +1,6 @@
 # Binding Architecture
 
-`ocamlfuse3` exposes an OCaml API over libfuse 3. The low-level binding is
+`fuse3` exposes an OCaml API over libfuse 3. The low-level binding is
 split between camlidl-generated code and hand-written OCaml and C glue.
 
 The binding targets `FUSE_USE_VERSION 30` to stay compatible with libfuse

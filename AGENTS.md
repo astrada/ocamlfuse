@@ -4,8 +4,8 @@ Scope: this file applies to the whole repository.
 
 ## Project
 
-This repository builds `ocamlfuse3`, OCaml bindings for libfuse 3. The public
-opam package and public Dune library are named `ocamlfuse3`; the local conf
+This repository builds `fuse3`, OCaml bindings for libfuse 3. The public
+opam package and public Dune library are named `fuse3`; the local conf
 package is `conf-libfuse3`; the internal Dune library name remains `fuse`.
 
 The lifecycle implementation targets FUSE 3 with `FUSE_USE_VERSION 30` and a
@@ -24,7 +24,7 @@ sources instead.
 
 - Build the library and install metadata: `dune build @install` or `make`.
 - Run the FUSE 3 discovery checks:
-  `dune build conf-libfuse3.opam ocamlfuse3.opam` and
+  `dune build conf-libfuse3.opam fuse3.opam` and
   `dune build lib/fuse3.cflags.sexp lib/fuse3.libs.sexp`.
 - Build the examples: `dune build example/hello.exe example/fusexmp.exe` or
   `make example`.

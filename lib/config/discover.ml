@@ -18,7 +18,7 @@ let read_file path =
     raise exc
 
 let () =
-  C.main ~name:"ocamlfuse3" (fun c ->
+  C.main ~name:"fuse3" (fun c ->
       let conf =
         match C.Pkg_config.get c with
         | None -> C.die "pkg-config is required to find libfuse3"

@@ -24,7 +24,7 @@
   ("conf-pkg-config" :build)))
 
 (package
- (name ocamlfuse3)
+ (name fuse3)
  (synopsis "OCaml bindings for FUSE 3 (Filesystem in UserSpacE)")
  (description "\
 This is a binding to FUSE 3 for the OCaml programming language, enabling

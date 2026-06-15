@@ -1,6 +1,6 @@
 # M9 Plan: Rename Public Package To `fuse3`
 
-Status: planned; package rename decision accepted.
+Status: complete.
 
 Depends on M8, which completed the post-FUSE-3 cleanup pass.
 
@@ -12,6 +12,12 @@ should remain `fuse`.
 
 This milestone is package identity work. It should not change FUSE callback
 semantics, runtime behavior, examples, or the public OCaml module shape.
+
+## Result
+
+M9 renamed the public opam package and public Dune library to `fuse3`. The
+internal Dune library remains `fuse`, the OCaml module remains `Fuse`, the conf
+package remains `conf-libfuse3`, and no `ocamlfuse3` alias package was added.
 
 ## Decisions
 
@@ -116,7 +122,8 @@ semantics, runtime behavior, examples, or the public OCaml module shape.
    ```
 
    Expected result: no matches in active metadata, active user docs, examples,
-   or tests. Historical matches may remain in `docs/plans/fuse3/`.
+   or tests except release-note entries that explicitly describe the rename.
+   Historical matches may remain in `docs/plans/fuse3/`.
 
 ## Exit Criteria
 

@@ -1,10 +1,10 @@
-# ocamlfuse3
+# fuse3
 
-`ocamlfuse3` provides OCaml bindings for libfuse 3. It lets OCaml programs
+`fuse3` provides OCaml bindings for libfuse 3. It lets OCaml programs
 implement high-level FUSE filesystems while using Bigarray-backed buffers for
 read and write callbacks.
 
-The public Dune and opam package is `ocamlfuse3`. The OCaml module remains
+The public Dune and opam package is `fuse3`. The OCaml module remains
 `Fuse`.
 
 ## Requirements
@@ -27,7 +27,7 @@ sudo apt install libfuse3-dev
 The recommended installation path is opam:
 
 ```sh
-opam install ocamlfuse3
+opam install fuse3
 ```
 
 For local development:
@@ -92,14 +92,14 @@ After `make example`, the executables are under `_build/default/example/`.
 Example:
 
 ```sh
-mkdir -p /tmp/ocamlfuse3-mnt
-_build/default/example/hello.exe /tmp/ocamlfuse3-mnt -f -s
+mkdir -p /tmp/fuse3-mnt
+_build/default/example/hello.exe /tmp/fuse3-mnt -f -s
 ```
 
 Unmount the filesystem from another shell when finished:
 
 ```sh
-fusermount3 -u /tmp/ocamlfuse3-mnt
+fusermount3 -u /tmp/fuse3-mnt
 ```
 
 Some systems still provide the unmount command as `fusermount`.
