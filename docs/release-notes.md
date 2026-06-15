@@ -37,7 +37,7 @@ Notable native API changes include:
 - `utimens` replaces the old float timestamp callback and uses nanosecond
   timestamps plus `Now` and `Omit` sentinels.
 - `Fuse.main` and `Fuse.Fuse_compat.main` accept `?loop_mode`, defaulting to
-  `Single_threaded`.
+  `Multi_threaded`.
 
 ## Compatibility API
 
@@ -56,25 +56,25 @@ Compatibility limits are intentional:
 
 ## Runtime Behavior
 
-The default runtime uses the high-level single-threaded `fuse_loop` path. The
-binding keeps the FUSE process foreground-oriented and releases the OCaml
-runtime while blocked in the FUSE loop.
+The default runtime uses libfuse's worker-thread loop. The binding calls
+`fuse_loop_mt`, keeps the FUSE process foreground-oriented, releases the OCaml
+runtime while blocked in the FUSE loop, and registers libfuse-created worker
+threads with the OCaml runtime before running OCaml callbacks.
 
-Users can opt into libfuse's worker-thread loop with
-`~loop_mode:Multi_threaded`. In that mode the binding calls `fuse_loop_mt` and
-registers libfuse-created worker threads with the OCaml runtime before running
-OCaml callbacks. FUSE `-s` still forces the single-threaded path.
+Users can opt out with `~loop_mode:Single_threaded`. FUSE `-s` also forces the
+single-threaded `fuse_loop` path.
 
 ## Tests
 
 `make test` runs unit and compile checks. `make e2e-smoke-test` runs the
 mounted smoke suite when FUSE is available. `make e2e` runs the full mounted
 suite, including coverage for the native FUSE 3 callback shape, xattrs,
-`utimens`, and rename flags. `make e2e-multithreaded-smoke-test` runs the
-mounted smoke suite with opt-in multithreaded mode. `make e2e-multithreaded`
-runs the full mounted suite with opt-in multithreaded mode, including a
-deterministic blocked-callback concurrency check.
+`utimens`, rename flags, and a deterministic blocked-callback concurrency
+check. `make e2e-single-threaded-smoke-test` and `make e2e-single-threaded`
+run the mounted suites with explicit single-threaded mode.
+`make e2e-multithreaded-smoke-test` and `make e2e-multithreaded` run the
+mounted suites with explicit multithreaded mode.
 
 Mounted tests require Linux, `/dev/fuse`, and permission to mount FUSE
-filesystems. Without FUSE access, the smoke suite prints `SKIP` unless
+filesystems. Without FUSE access, mounted e2e targets print `SKIP` unless
 `OCAMLFUSE_E2E_REQUIRE_FUSE=1` is set.

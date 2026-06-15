@@ -75,15 +75,21 @@ Run the full mounted end-to-end suite:
 make e2e
 ```
 
-Run the full mounted end-to-end suite in multithreaded mode:
+Run the full mounted end-to-end suite in explicit single-threaded mode:
+
+```sh
+make e2e-single-threaded
+```
+
+Run the full mounted end-to-end suite in explicit multithreaded mode:
 
 ```sh
 make e2e-multithreaded
 ```
 
 The mounted tests require Linux, `/dev/fuse` access, and permission to mount
-FUSE filesystems. When FUSE access is unavailable, `make e2e-smoke-test` prints
-`SKIP` and exits successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make
+FUSE filesystems. When FUSE access is unavailable, mounted e2e targets print
+`SKIP` and exit successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make
 missing FUSE support a failure.
 
 ## Examples
@@ -129,10 +135,10 @@ parameters, reject unsupported rename flags with `EINVAL`, reject timestamp
 sentinels that old `utime` callbacks cannot represent, and convert file handles
 back to `int` with overflow checks.
 
-The default FUSE loop is single-threaded and foreground-oriented. Users can opt
-into libfuse's multithreaded loop with `~loop_mode:Multi_threaded`. In that
-mode, libfuse owns worker threads and the binding registers those threads with
-the OCaml runtime before invoking OCaml callbacks. FUSE `-s` still forces the
+The default FUSE loop uses libfuse's multithreaded loop. In that mode, libfuse
+owns worker threads and the binding registers those threads with the OCaml
+runtime before invoking OCaml callbacks. Users who need single-threaded
+execution can pass `~loop_mode:Single_threaded`; FUSE `-s` also forces the
 single-threaded path.
 
 ## Documentation

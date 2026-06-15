@@ -7,7 +7,11 @@ let getenv_required name =
 let mode = try Sys.getenv "OCAMLFUSE_E2E_MODE" with Not_found -> "smoke"
 
 let loop_mode =
-  try Sys.getenv "OCAMLFUSE_E2E_LOOP_MODE" with Not_found -> "single"
+  match Sys.getenv_opt "OCAMLFUSE_E2E_LOOP_MODE" with
+  | None | Some "default" -> "default"
+  | Some "single" -> "single"
+  | Some "multi" -> "multi"
+  | Some mode -> failwith ("unknown OCAMLFUSE_E2E_LOOP_MODE: " ^ mode)
 
 let mountpoint = getenv_required "OCAMLFUSE_E2E_MOUNTPOINT"
 let log_path = getenv_required "OCAMLFUSE_E2E_LOG"
@@ -379,7 +383,7 @@ let full_tests =
 let smoke_tests = [ "smoke" >:: smoke_test ]
 
 let tests_for_mode =
-  if mode = "full" && loop_mode = "multi" then
+  if mode = "full" && (loop_mode = "default" || loop_mode = "multi") then
     full_tests
     @ [ "multithreaded-concurrency" >:: multithreaded_concurrency_test ]
   else full_tests

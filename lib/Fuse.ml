@@ -199,7 +199,7 @@ let default_operations =
 
 let int_of_loop_mode = function Single_threaded -> 0 | Multi_threaded -> 1
 
-let main ?(loop_mode = Single_threaded) argv ops =
+let main ?(loop_mode = Multi_threaded) argv ops =
   Fuse_bindings.ml_fuse_init ();
   Fuse_bindings.set_fuse_operations (op_names_of_operations ops);
   let loop_mode = int_of_loop_mode loop_mode in

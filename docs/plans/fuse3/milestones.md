@@ -440,7 +440,7 @@ OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-multithreaded
 
 ## M11: Default To Multithreaded Loop Mode
 
-Status: planned; decisions accepted. See `m11-plan.md`.
+Status: complete. See `m11-plan.md`.
 
 Switch the public default runtime from single-threaded `fuse_loop` to
 libfuse's multithreaded `fuse_loop_mt`.

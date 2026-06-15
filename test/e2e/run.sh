@@ -6,7 +6,7 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd "$script_dir/../.." && pwd)
 mode=${1:-smoke}
 require_fuse=${OCAMLFUSE_E2E_REQUIRE_FUSE:-0}
-loop_mode=${OCAMLFUSE_E2E_LOOP_MODE:-single}
+loop_mode=${OCAMLFUSE_E2E_LOOP_MODE:-default}
 
 case "$mode" in
   smoke | full) ;;
@@ -17,7 +17,7 @@ case "$mode" in
 esac
 
 case "$loop_mode" in
-  single | multi) ;;
+  default | single | multi) ;;
   *)
     echo "unsupported OCAMLFUSE_E2E_LOOP_MODE: $loop_mode" >&2
     exit 2

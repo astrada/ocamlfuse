@@ -10,11 +10,12 @@ package is `conf-libfuse3`; the internal Dune library name remains `fuse`.
 
 The lifecycle implementation targets FUSE 3 with `FUSE_USE_VERSION 30` and a
 manual high-level `fuse_new`/`fuse_mount` integration. The default runtime uses
-`fuse_loop`; opt-in `Fuse.Multi_threaded` uses libfuse's `fuse_loop_mt` and
-registers libfuse-created worker threads with the OCaml runtime before invoking
-callbacks. The public OCaml callback API is FUSE-3-shaped. The legacy callback
-record shape is available through the nested `Fuse.Fuse_compat` module for
-upgrade compatibility.
+libfuse's `fuse_loop_mt` and registers libfuse-created worker threads with the
+OCaml runtime before invoking callbacks. Explicit `Fuse.Single_threaded` mode
+uses `fuse_loop`, and FUSE `-s` also forces the single-threaded path. The public
+OCaml callback API is FUSE-3-shaped. The legacy callback record shape is
+available through the nested `Fuse.Fuse_compat` module for upgrade
+compatibility.
 
 The binding layer is generated with camlidl and completed by hand-written OCaml
 and C glue. Treat the generated binding files as build artifacts and edit their
@@ -29,10 +30,13 @@ sources instead.
 - Build the examples: `dune build example/hello.exe example/fusexmp.exe` or
   `make example`.
 - Run unit tests and compile checks: `make test`.
-- Run the smoke test: `make e2e-smoke-test`.
+- Run the default-mode smoke test: `make e2e-smoke-test`.
+- Run the single-threaded smoke test: `make e2e-single-threaded-smoke-test`.
 - Run the multithreaded smoke test: `make e2e-multithreaded-smoke-test`.
-- Run the full end-to-end suite: `make e2e` or `test/e2e/run.sh full`.
-- Run the full multithreaded end-to-end suite: `make e2e-multithreaded`.
+- Run the default-mode full end-to-end suite: `make e2e` or
+  `test/e2e/run.sh full`.
+- Run the single-threaded full end-to-end suite: `make e2e-single-threaded`.
+- Run the multithreaded full end-to-end suite: `make e2e-multithreaded`.
 - Format tracked OCaml sources: `tools/format_ocaml`.
 - Format selected OCaml sources: `tools/format_ocaml path/to/file.ml
 path/to/file.mli`.
@@ -49,10 +53,11 @@ behavior changes, run `make e2e-smoke-test` outside the sandbox.
 when FUSE is available. If FUSE is unavailable, it prints `SKIP` and exits
 successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a
 failure.
-For loop-mode changes, also run `make e2e-multithreaded-smoke-test` and
-`make e2e-multithreaded` outside the sandbox.
+For loop-mode changes, also run the explicit single-threaded and multithreaded
+e2e targets outside the sandbox.
 
 The e2e tests (`make e2e-smoke-test`, `make e2e`,
+`make e2e-single-threaded-smoke-test`, `make e2e-single-threaded`,
 `make e2e-multithreaded-smoke-test`, `make e2e-multithreaded`) should be run
 outside the sandbox, because inside the sandbox `/dev/fuse` is not accessible.
 
@@ -82,8 +87,8 @@ equivalent.
   native `Fuse` backing filesystem, `client.ml` contains OUnit2 assertions,
   `xattr_stubs.c` provides Linux xattr, timestamp, and rename helpers,
   `compat_compile.ml` compile-checks `Fuse.Fuse_compat`, and `run.sh` mounts,
-  tests, and cleans up. The multithreaded full suite includes a deterministic
-  blocked-callback concurrency check.
+  tests, and cleans up. The default and explicit multithreaded full suites
+  include a deterministic blocked-callback concurrency check.
 - `tools/format_ocaml`: repository formatter wrapper for `.ml` and `.mli`
   files. It requires `ocamlformat` in `PATH`.
 - `tools/format_c`: repository formatter wrapper for `.c` and `.h` files. It

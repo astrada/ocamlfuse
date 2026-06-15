@@ -1,6 +1,6 @@
 # M11 Plan: Default To Multithreaded Loop Mode
 
-Status: planned; decisions accepted; ready to implement.
+Status: complete.
 
 Depends on M10, which added full mounted e2e coverage for
 `Fuse.Multi_threaded`, including a deterministic blocked-callback concurrency
@@ -25,7 +25,23 @@ This milestone intentionally changes default runtime behavior. It should not
 change callback record shapes, the `loop_mode` type, or the supported libfuse
 version target.
 
-## Current State
+## Result
+
+M11 changed `Fuse.main` so omitted `?loop_mode` now selects
+`Multi_threaded`. `Fuse.Fuse_compat.main` inherits that default by forwarding
+the optional argument to the native implementation.
+
+The mounted e2e runner now has three loop modes:
+
+- `default`: calls `Fuse.main` without `~loop_mode` and does not pass `-s`;
+- `single`: calls `Fuse.main ~loop_mode:Single_threaded` and passes `-s`;
+- `multi`: calls `Fuse.main ~loop_mode:Multi_threaded` and does not pass `-s`.
+
+The default mounted targets exercise `default` mode. Explicit
+single-threaded and multithreaded targets remain available for direct
+regression coverage.
+
+## Starting State
 
 - `Fuse.main` defaults `?loop_mode` to `Single_threaded`.
 - `Fuse.Fuse_compat.main` forwards its optional `?loop_mode` to `Fuse.main`.
@@ -203,3 +219,23 @@ make e2e-multithreaded
 OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e
 OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-single-threaded
 ```
+
+Completed checks:
+
+- `bash -n test/e2e/run.sh`: passed.
+- `tools/format_ocaml lib/Fuse.ml test/e2e/testfs.ml test/e2e/client.ml test/unit/loop_mode_compile.ml`:
+  passed.
+- `dune build @install`: passed.
+- `make test`: passed.
+- `dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe`:
+  passed.
+- `make example`: passed.
+- `git diff --check`: passed.
+- `make e2e-smoke-test`: passed, 1 test.
+- `make e2e`: passed, 10 tests.
+- `make e2e-single-threaded-smoke-test`: passed, 1 test.
+- `make e2e-single-threaded`: passed, 9 tests.
+- `make e2e-multithreaded-smoke-test`: passed, 1 test.
+- `make e2e-multithreaded`: passed, 10 tests.
+- `OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e`: passed, 10 tests.
+- `OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-single-threaded`: passed, 9 tests.

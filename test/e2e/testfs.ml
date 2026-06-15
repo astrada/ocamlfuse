@@ -14,10 +14,13 @@ let raise_unix err fn path = raise (Unix_error (err, fn, path))
 let mt_blocking_read_path = "/__ocamlfuse_e2e_blocking_read"
 let mt_blocking_read_payload = "multithreaded read released\n"
 
+type e2e_loop_mode = Default | Explicit of Fuse.loop_mode
+
 let loop_mode =
   match Sys.getenv_opt "OCAMLFUSE_E2E_LOOP_MODE" with
-  | None | Some "single" -> Single_threaded
-  | Some "multi" -> Multi_threaded
+  | None | Some "default" -> Default
+  | Some "single" -> Explicit Single_threaded
+  | Some "multi" -> Explicit Multi_threaded
   | Some mode -> failwith ("unsupported OCAMLFUSE_E2E_LOOP_MODE: " ^ mode)
 
 let components path =
@@ -348,4 +351,7 @@ let test_operations =
         Unix.fsync (retrieve_descr fi.fi_fh));
   }
 
-let () = main ~loop_mode Sys.argv test_operations
+let () =
+  match loop_mode with
+  | Default -> main Sys.argv test_operations
+  | Explicit loop_mode -> main ~loop_mode Sys.argv test_operations

@@ -50,14 +50,14 @@ The FUSE loop releases the OCaml runtime while blocked in `fuse_loop` or
 `fuse_loop_mt`, then reacquires it before returning to OCaml. Callback wrappers
 are responsible for acquiring the runtime before invoking OCaml callbacks.
 
-The default runtime path uses the single-threaded high-level loop.
-`Fuse.main ?loop_mode` and `Fuse.Fuse_compat.main ?loop_mode` can opt into
-libfuse's multithreaded loop. In multithreaded mode, libfuse creates worker
-threads; the binding registers those foreign threads with the OCaml runtime on
-callback entry and unregisters them when the worker thread exits. OCaml callback
-execution is still serialized by the OCaml runtime lock, but callback
-interleaving can happen around blocking C or Unix calls. FUSE `-s` forces the
-effective runtime path back to single-threaded mode.
+The default runtime path uses libfuse's multithreaded high-level loop.
+`Fuse.main ?loop_mode` and `Fuse.Fuse_compat.main ?loop_mode` can explicitly
+select single-threaded or multithreaded execution. In multithreaded mode,
+libfuse creates worker threads; the binding registers those foreign threads
+with the OCaml runtime on callback entry and unregisters them when the worker
+thread exits. OCaml callback execution is still serialized by the OCaml runtime
+lock, but callback interleaving can happen around blocking C or Unix calls.
+FUSE `-s` forces the effective runtime path back to single-threaded mode.
 
 ## Public API Shape
 
