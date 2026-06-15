@@ -353,3 +353,41 @@ make e2e-smoke-test
 make e2e-multithreaded-smoke-test
 make e2e
 ```
+
+## M9: Rename Public Package To `fuse3`
+
+Status: planned. See `m9-plan.md`.
+
+Rename the public Dune library and opam package from `ocamlfuse3` to `fuse3`
+while keeping the OCaml module name `Fuse`, the internal Dune library name
+`fuse`, and the conf package name `conf-libfuse3`.
+
+Tasks:
+
+- Rename the package stanza in `dune-project` to `fuse3`.
+- Rename `ocamlfuse3.opam.template` to `fuse3.opam.template`.
+- Regenerate `fuse3.opam` and remove `ocamlfuse3.opam`.
+- Update `lib/dune` to expose `(public_name fuse3)`.
+- Update repo-local Dune dependencies in examples and tests.
+- Update active README, AGENTS, binding docs, and release notes.
+
+Exit criteria:
+
+- `dune-project` defines package `fuse3`.
+- `lib/dune` exposes public library `fuse3`.
+- `fuse3.opam` is generated.
+- Examples and tests depend on `(libraries fuse3 ...)`.
+- The OCaml module remains `Fuse`.
+- The conf package remains `conf-libfuse3`.
+- No runtime behavior changes are made.
+
+Verification:
+
+```sh
+dune build conf-libfuse3.opam fuse3.opam
+dune build @install
+make test
+dune build example/hello.exe example/fusexmp.exe
+dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
+git diff --check
+```
