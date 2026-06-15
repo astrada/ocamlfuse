@@ -391,3 +391,49 @@ dune build example/hello.exe example/fusexmp.exe
 dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
 git diff --check
 ```
+
+## M10: Multithreaded e2e Test Suite
+
+Status: planned; recommendations accepted. See `m10-plan.md`.
+
+Broaden mounted coverage for `Fuse.Multi_threaded` beyond the existing smoke
+test.
+
+Tasks:
+
+- Add a full multithreaded mounted target, `make e2e-multithreaded`.
+- Run the existing full callback matrix under `OCAMLFUSE_E2E_LOOP_MODE=multi`.
+- Add a deterministic concurrency test using a blocked test-only callback and a
+  second independent mounted request.
+- Keep `make e2e` as the default single-threaded full mounted suite.
+- Keep `make test` limited to unit and compile checks.
+- Update README, AGENTS, release notes, and e2e documentation.
+
+Exit criteria:
+
+- `make e2e-multithreaded-smoke-test` remains a fast multithreaded smoke path.
+- `make e2e-multithreaded` runs the full mounted suite in multithreaded mode.
+- The multithreaded full suite proves an independent request completes while
+  another callback is blocked.
+- Existing FUSE skip behavior remains unchanged.
+- No public API or default runtime behavior changes are made.
+
+Verification:
+
+```sh
+tools/format_ocaml test/e2e/testfs.ml test/e2e/client.ml
+dune build @install
+make test
+dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
+git diff --check
+```
+
+Run mounted checks outside the sandbox:
+
+```sh
+make e2e-smoke-test
+make e2e
+make e2e-multithreaded-smoke-test
+make e2e-multithreaded
+OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-multithreaded
+```
