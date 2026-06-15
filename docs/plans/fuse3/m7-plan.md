@@ -1,6 +1,6 @@
 # M7 Plan: Opt-In libfuse Multithreaded Loop
 
-Status: planned; recommendations accepted.
+Status: complete.
 
 Depends on M6, which selected direct `fuse_loop_mt` support with explicit
 foreign-thread registration instead of an OCaml-owned custom session loop.
@@ -17,6 +17,19 @@ fuse_loop_mt(fuse, opts.clone_fd)
 The default runtime must remain single-threaded. Multithreading should be
 activated only when user code passes `~loop_mode:Multi_threaded`, and FUSE `-s`
 must continue to force the effective path back to single-threaded execution.
+
+## Result
+
+M7 added the public `loop_mode` control, routed effective `Multi_threaded`
+through `fuse_loop_mt(fuse, opts.clone_fd)`, and added pthread TLS based
+registration for libfuse-created callback threads. The default remains
+`Single_threaded`, and FUSE `-s` still forces the `fuse_loop` path.
+
+The e2e runner can select `OCAMLFUSE_E2E_LOOP_MODE=single|multi`. `make test`
+runs unit and compile checks, `make e2e-smoke-test` keeps the default mounted
+smoke path, and
+`make e2e-multithreaded-smoke-test` runs the smoke path in opt-in multithreaded
+mode.
 
 ## Non-Goals
 
@@ -143,7 +156,7 @@ Keep mounted FUSE tests separate from unit tests.
 
 Recommended test changes:
 
-- keep `make test` on the existing default smoke path for this branch;
+- keep `make e2e-smoke-test` on the existing default smoke path for this branch;
 - add a separate mounted multithreaded smoke target, for example
   `make e2e-multithreaded-smoke-test`;
 - let `test/e2e/run.sh` accept `OCAMLFUSE_E2E_LOOP_MODE=single|multi`;
@@ -197,13 +210,14 @@ dune build conf-libfuse3.opam ocamlfuse3.opam
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
 make test
+make e2e-smoke-test
 make e2e-multithreaded-smoke-test
 ```
 
 Run mounted checks outside the sandbox:
 
 ```sh
-make test
+make e2e-smoke-test
 make e2e-multithreaded-smoke-test
 make e2e
 ```

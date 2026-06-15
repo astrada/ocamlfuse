@@ -166,11 +166,11 @@ These checks passed for M5:
 dune build conf-libfuse3.opam ocamlfuse3.opam
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
-make test
+make e2e-smoke-test
 ```
 
-`make test` passed outside the sandbox on a Linux host with `/dev/fuse` access.
-The sandbox skip path was checked separately with `make test` inside the
+`make e2e-smoke-test` passed outside the sandbox on a Linux host with `/dev/fuse` access.
+The sandbox skip path was checked separately with `make e2e-smoke-test` inside the
 sandbox, where `/dev/fuse` is unavailable. It printed `SKIP` and exited
 successfully.
 

@@ -119,7 +119,8 @@ The repository is partway through the libfuse 3 migration:
 ### Testing
 
 - `dune build @install` must compile against libfuse 3.
-- `make test` must run the smoke e2e suite against a mounted FUSE 3 filesystem.
+- `make e2e-smoke-test` must run the smoke e2e suite against a mounted FUSE 3
+  filesystem.
 - `make e2e` must run the full e2e suite against FUSE 3 and cover every
   implemented callback.
 - The e2e harness must continue to skip cleanly when FUSE access is unavailable

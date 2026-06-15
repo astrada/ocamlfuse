@@ -1,6 +1,6 @@
 # M6 Analysis: Multithreaded Loop Support
 
-Status: analysis complete; implementation is not started.
+Status: analysis complete; M7 implementation is complete.
 
 Depends on M5, which is complete.
 
@@ -185,7 +185,7 @@ surface depends on it.
 
 Add multithreaded coverage separately from the default smoke test:
 
-- keep `make test` focused on the default single-threaded smoke path;
+- keep `make e2e-smoke-test` focused on the default single-threaded smoke path;
 - add a full-suite option or separate target that runs the e2e filesystem with
   opt-in multithreaded mode;
 - include a concurrency-oriented test that makes one callback block while
@@ -199,7 +199,7 @@ pipes, or another deterministic barrier.
 
 ## Implementation Milestone Proposal
 
-Use a follow-up implementation milestone after this analysis:
+M7 implemented the follow-up work after this analysis:
 
 1. Add `loop_mode` to `Fuse.ml` and `Fuse.mli`.
 2. Extend `Fuse.Fuse_compat.main` with the same optional loop-mode control.

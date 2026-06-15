@@ -85,6 +85,7 @@ type dir_entry = {
 
 type timespec = { tv_sec : int64; tv_nsec : int }
 type timestamp = Time of timespec | Now | Omit
+type loop_mode = Single_threaded | Multi_threaded
 
 type operations = {
   init : unit -> unit;
@@ -123,7 +124,7 @@ type operations = {
 
 val op_names_of_operations : operations -> Fuse_bindings.fuse_operation_names
 val default_operations : operations
-val main : Fuse_bindings.str array -> operations -> unit
+val main : ?loop_mode:loop_mode -> Fuse_bindings.str array -> operations -> unit
 
 module Fuse_compat : sig
   type operations = {
@@ -159,5 +160,7 @@ module Fuse_compat : sig
   }
 
   val default_operations : operations
-  val main : Fuse_bindings.str array -> operations -> unit
+
+  val main :
+    ?loop_mode:loop_mode -> Fuse_bindings.str array -> operations -> unit
 end

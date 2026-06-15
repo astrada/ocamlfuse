@@ -146,21 +146,21 @@ tools/format_c test/e2e/xattr_stubs.c
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
 dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
-make test
+make e2e-smoke-test
 make e2e
-OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test
+OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-smoke-test
 git diff --check
 ```
 
 Mounted test commands were run outside the sandbox on a Linux host with
 `/dev/fuse` access:
 
-- `make test`: passed, running the smoke suite.
+- `make e2e-smoke-test`: passed, running the smoke suite.
 - `make e2e`: passed, running the full 9-test suite.
-- `OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test`: passed, proving the required-FUSE
+- `OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-smoke-test`: passed, proving the required-FUSE
   smoke path works.
 
-The sandbox skip path was checked separately with `make test` inside the
+The sandbox skip path was checked separately with `make e2e-smoke-test` inside the
 sandbox, where `/dev/fuse` is unavailable. It printed `SKIP` and exited
 successfully.
 

@@ -6,11 +6,20 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd "$script_dir/../.." && pwd)
 mode=${1:-smoke}
 require_fuse=${OCAMLFUSE_E2E_REQUIRE_FUSE:-0}
+loop_mode=${OCAMLFUSE_E2E_LOOP_MODE:-single}
 
 case "$mode" in
   smoke | full) ;;
   *)
     echo "usage: test/e2e/run.sh [smoke|full]" >&2
+    exit 2
+    ;;
+esac
+
+case "$loop_mode" in
+  single | multi) ;;
+  *)
+    echo "unsupported OCAMLFUSE_E2E_LOOP_MODE: $loop_mode" >&2
     exit 2
     ;;
 esac
@@ -103,11 +112,17 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+fuse_args=("$mountpoint" -f -o fsname=ocamlfuse_e2e)
+if [ "$loop_mode" = "single" ]; then
+  fuse_args+=(-s)
+fi
+
 OCAMLFUSE_E2E_BACKING_ROOT="$backing_root" \
 OCAMLFUSE_E2E_LOG="$callback_log" \
 OCAMLFUSE_E2E_READY="$ready_marker" \
-  _build/default/test/e2e/testfs.exe "$mountpoint" -f -s \
-    -o fsname=ocamlfuse_e2e >"$testfs_stdout" 2>"$testfs_stderr" &
+OCAMLFUSE_E2E_LOOP_MODE="$loop_mode" \
+  _build/default/test/e2e/testfs.exe "${fuse_args[@]}" \
+    >"$testfs_stdout" 2>"$testfs_stderr" &
 fs_pid=$!
 
 deadline=$((SECONDS + 10))
@@ -136,6 +151,7 @@ set +e
 OCAMLFUSE_E2E_MODE="$mode" \
 OCAMLFUSE_E2E_MOUNTPOINT="$mountpoint" \
 OCAMLFUSE_E2E_LOG="$callback_log" \
+OCAMLFUSE_E2E_LOOP_MODE="$loop_mode" \
   run_with_timeout 30 _build/default/test/e2e/client.exe
 status=$?
 set -e

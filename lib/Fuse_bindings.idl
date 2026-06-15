@@ -81,4 +81,4 @@ quote(h,"#define __file_info file_info");
 void set_fuse_operations([ref] const struct fuse_operation_names * op);
 
 void ml_fuse_init();
-int ml_fuse_main(int argc,[size_is(argc)] str argv[],[ptr] const struct fuse_operations *op);
+int ml_fuse_main(int argc,[size_is(argc)] str argv[],[ptr] const struct fuse_operations *op,int loop_mode);

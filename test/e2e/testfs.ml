@@ -10,6 +10,12 @@ let log_path = getenv_required "OCAMLFUSE_E2E_LOG"
 let ready_path = getenv_required "OCAMLFUSE_E2E_READY"
 let raise_unix err fn path = raise (Unix_error (err, fn, path))
 
+let loop_mode =
+  match Sys.getenv_opt "OCAMLFUSE_E2E_LOOP_MODE" with
+  | None | Some "single" -> Single_threaded
+  | Some "multi" -> Multi_threaded
+  | Some mode -> failwith ("unsupported OCAMLFUSE_E2E_LOOP_MODE: " ^ mode)
+
 let components path =
   let add_component path start stop acc =
     if stop <= start then acc
@@ -265,4 +271,4 @@ let test_operations =
         Unix.fsync (retrieve_descr fi.fi_fh));
   }
 
-let () = main Sys.argv test_operations
+let () = main ~loop_mode Sys.argv test_operations

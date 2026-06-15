@@ -128,7 +128,7 @@ Provide two modes:
   file, verify contents through the mountpoint, and unmount.
 - `full`: run the complete callback matrix below.
 
-`make test` should run `smoke`. The full suite should be easy to run
+`make e2e-smoke-test` should run `smoke`. The full suite should be easy to run
 explicitly, for example:
 
 ```sh
@@ -138,7 +138,7 @@ test/e2e/run.sh full
 Add Makefile targets once the scripts exist:
 
 ```make
-test:
+e2e-smoke-test:
 	dune build @install
 	test/e2e/run.sh smoke
 
@@ -215,7 +215,7 @@ Platform-sensitive operations should be handled explicitly:
 Use two layers in CI:
 
 - Always run `dune build @install` and build the test binaries.
-- Run `make test` on jobs that have FUSE available. This runs the smoke test.
+- Run `make e2e-smoke-test` on jobs that have FUSE available. This runs the smoke test.
 
 For CI jobs intended to validate FUSE behavior, set
 `OCAMLFUSE_E2E_REQUIRE_FUSE=1` so missing mount support fails loudly. For
@@ -223,7 +223,7 @@ general package builds, leave it unset so the e2e suite skips cleanly.
 
 ## Decisions
 
-- `make test` runs the smoke test.
+- `make e2e-smoke-test` runs the smoke test.
 - The first version targets Linux only.
 - Test-only C xattr helpers are acceptable.
 - The first version is single-threaded; multithreaded smoke coverage can be

@@ -9,11 +9,12 @@ opam package and public Dune library are named `ocamlfuse3`; the local conf
 package is `conf-libfuse3`; the internal Dune library name remains `fuse`.
 
 The lifecycle implementation targets FUSE 3 with `FUSE_USE_VERSION 30` and a
-manual high-level `fuse_new`/`fuse_mount`/`fuse_loop` integration. The public
-OCaml callback API is FUSE-3-shaped. The legacy callback record shape is
-available through the nested `Fuse.Fuse_compat` module for upgrade
-compatibility. The current runtime is single-threaded; multithreaded loop
-support is analyzed in `docs/plans/fuse3/m6-analysis.md` but not implemented.
+manual high-level `fuse_new`/`fuse_mount` integration. The default runtime uses
+`fuse_loop`; opt-in `Fuse.Multi_threaded` uses libfuse's `fuse_loop_mt` and
+registers libfuse-created worker threads with the OCaml runtime before invoking
+callbacks. The public OCaml callback API is FUSE-3-shaped. The legacy callback
+record shape is available through the nested `Fuse.Fuse_compat` module for
+upgrade compatibility.
 
 The binding layer is generated with camlidl and completed by hand-written OCaml
 and C glue. Treat the generated binding files as build artifacts and edit their
@@ -27,7 +28,9 @@ sources instead.
   `dune build lib/fuse3.cflags.sexp lib/fuse3.libs.sexp`.
 - Build the examples: `dune build example/hello.exe example/fusexmp.exe` or
   `make example`.
-- Run the smoke test: `make test`.
+- Run unit tests and compile checks: `make test`.
+- Run the smoke test: `make e2e-smoke-test`.
+- Run the multithreaded smoke test: `make e2e-multithreaded-smoke-test`.
 - Run the full end-to-end suite: `make e2e` or `test/e2e/run.sh full`.
 - Format tracked OCaml sources: `tools/format_ocaml`.
 - Format selected OCaml sources: `tools/format_ocaml path/to/file.ml
@@ -39,13 +42,18 @@ path/to/file.mli`.
 For non-documentation code changes, run `dune build @install` and `make test`.
 Run build and test **sequentially** because `dune` uses a lock file that prevents
 running more than one `dune` command in parallel.
-For public API or example changes, also run the example build. `make test`
-builds the e2e test binaries, then runs the smoke test when FUSE is available.
-If FUSE is unavailable, it prints `SKIP` and exits successfully. Set
-`OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a failure.
+For public API or example changes, also run the example build. For mounted FUSE
+behavior changes, run `make e2e-smoke-test` outside the sandbox.
+`make e2e-smoke-test` builds the e2e test binaries, then runs the smoke test
+when FUSE is available. If FUSE is unavailable, it prints `SKIP` and exits
+successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a
+failure.
+For loop-mode changes, also run `make e2e-multithreaded-smoke-test` outside the
+sandbox.
 
-The e2e tests (`make test`, `make e2e`) should be run outside the sandbox,
-because inside the sandbox `/dev/fuse` is not accessible.
+The e2e tests (`make e2e-smoke-test`, `make e2e`, `make
+e2e-multithreaded-smoke-test`) should be run outside the sandbox, because inside
+the sandbox `/dev/fuse` is not accessible.
 
 Running the examples mounts FUSE filesystems and requires a working libfuse
 runtime, `/dev/fuse` access, and mount permissions. Do not assume those are
@@ -64,8 +72,8 @@ equivalent.
 - `lib/Fuse.ml` and `lib/Fuse.mli`: public OCaml API.
 - `lib/Fuse_lib.ml`: callback registration helpers.
 - `lib/Fuse_util.c`: hand-written C glue between FUSE callbacks and OCaml
-  callbacks, including FUSE 3 file-info, rename, readdir, and timestamp
-  conversions.
+  callbacks, including FUSE 3 file-info, rename, readdir, timestamp
+  conversions, lifecycle loop dispatch, and libfuse worker-thread registration.
 - `lib/Unix_util.ml` and `lib/Unix_util_stubs.c`: Unix helper bindings used by
   the library and examples.
 - `example/`: small filesystems used as buildable examples.

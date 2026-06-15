@@ -150,7 +150,7 @@ tools/format_ocaml \
 tools/format_c lib/Fuse_util.c
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
-make test
+make e2e-smoke-test
 ```
 
 ## M4: Examples And e2e Tests
@@ -175,7 +175,7 @@ Exit criteria:
 
 - Examples and the mounted e2e filesystem compile against native `Fuse`.
 - Only the compile-only compatibility target uses `Fuse.Fuse_compat`.
-- `make test` passes on a FUSE-capable Linux host.
+- `make e2e-smoke-test` passes on a FUSE-capable Linux host.
 - `make e2e` passes on a FUSE-capable Linux host.
 - The skip path still works when FUSE is unavailable.
 
@@ -189,9 +189,9 @@ tools/format_c test/e2e/xattr_stubs.c
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
 dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
-make test
+make e2e-smoke-test
 make e2e
-OCAMLFUSE_E2E_REQUIRE_FUSE=1 make test
+OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-smoke-test
 ```
 
 ## M5: Documentation And Release Preparation
@@ -267,7 +267,7 @@ rg -n "fuse_loop_mt|caml_c_thread_register|Thread_pool|single-thread|multithread
 
 ## M7: Opt-In libfuse Multithreaded Loop
 
-Status: planned. See `m7-plan.md`.
+Status: complete. See `m7-plan.md`.
 
 Implement opt-in multithreaded support with libfuse's high-level
 `fuse_loop_mt(fuse, opts.clone_fd)` path and OCaml foreign-thread registration.
@@ -305,7 +305,7 @@ tools/format_c lib/Fuse_util.c
 dune build conf-libfuse3.opam ocamlfuse3.opam
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
-make test
+make e2e-smoke-test
 make e2e-multithreaded-smoke-test
 make e2e
 ```

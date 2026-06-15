@@ -46,6 +46,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <math.h>
+#include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -472,6 +474,111 @@ static enum fuse_fill_dir_flags ml2c_fill_dir_flags(value vflags) {
 
 static struct fuse_operations ops = {FOR_ALL_OPS(SET_NULL_OP)};
 
+enum ml_fuse_thread_kind {
+  ML_FUSE_THREAD_NONE = 0,
+  ML_FUSE_THREAD_OCAML_OWNED = 1,
+  ML_FUSE_THREAD_REGISTERED_BY_BINDING = 2,
+};
+
+static pthread_once_t ml_fuse_thread_key_once = PTHREAD_ONCE_INIT;
+static pthread_key_t ml_fuse_thread_key;
+static int ml_fuse_thread_key_created = 0;
+static pthread_mutex_t ml_fuse_thread_registration_lock =
+    PTHREAD_MUTEX_INITIALIZER;
+static int ml_fuse_thread_registration_failed = 0;
+
+static void ml_fuse_record_thread_registration_failure() {
+  pthread_mutex_lock(&ml_fuse_thread_registration_lock);
+  ml_fuse_thread_registration_failed = 1;
+  pthread_mutex_unlock(&ml_fuse_thread_registration_lock);
+}
+
+static int ml_fuse_thread_registration_has_failed() {
+  int failed;
+
+  pthread_mutex_lock(&ml_fuse_thread_registration_lock);
+  failed = ml_fuse_thread_registration_failed;
+  pthread_mutex_unlock(&ml_fuse_thread_registration_lock);
+
+  return failed;
+}
+
+static void ml_fuse_reset_thread_registration_failure() {
+  pthread_mutex_lock(&ml_fuse_thread_registration_lock);
+  ml_fuse_thread_registration_failed = 0;
+  pthread_mutex_unlock(&ml_fuse_thread_registration_lock);
+}
+
+static void ml_fuse_thread_key_destructor(void *value) {
+  if ((intptr_t)value == ML_FUSE_THREAD_REGISTERED_BY_BINDING)
+    (void)caml_c_thread_unregister();
+}
+
+static void ml_fuse_make_thread_key() {
+  if (pthread_key_create(&ml_fuse_thread_key, ml_fuse_thread_key_destructor) ==
+      0)
+    ml_fuse_thread_key_created = 1;
+  else
+    ml_fuse_record_thread_registration_failure();
+}
+
+static int ml_fuse_ensure_thread_key() {
+  if (pthread_once(&ml_fuse_thread_key_once, ml_fuse_make_thread_key) != 0)
+    ml_fuse_record_thread_registration_failure();
+
+  return ml_fuse_thread_key_created ? 0 : -1;
+}
+
+static int ml_fuse_set_thread_kind(enum ml_fuse_thread_kind kind) {
+  if (ml_fuse_ensure_thread_key() != 0)
+    return -1;
+
+  if (pthread_setspecific(ml_fuse_thread_key, (void *)(intptr_t)kind) != 0) {
+    ml_fuse_record_thread_registration_failure();
+    return -1;
+  }
+
+  return 0;
+}
+
+static int ml_fuse_mark_ocaml_thread() {
+  return ml_fuse_set_thread_kind(ML_FUSE_THREAD_OCAML_OWNED);
+}
+
+static void ml_fuse_clear_thread_kind() {
+  if (ml_fuse_thread_key_created)
+    (void)pthread_setspecific(ml_fuse_thread_key, NULL);
+}
+
+static int ml_fuse_enter_ocaml_callback() {
+  enum ml_fuse_thread_kind kind;
+
+  if (ml_fuse_ensure_thread_key() != 0)
+    return -1;
+
+  kind = (enum ml_fuse_thread_kind)(intptr_t)pthread_getspecific(
+      ml_fuse_thread_key);
+  if (kind == ML_FUSE_THREAD_NONE) {
+    if (caml_c_thread_register() == 0) {
+      ml_fuse_record_thread_registration_failure();
+      return -1;
+    }
+
+    if (pthread_setspecific(
+            ml_fuse_thread_key,
+            (void *)(intptr_t)ML_FUSE_THREAD_REGISTERED_BY_BINDING) != 0) {
+      (void)caml_c_thread_unregister();
+      ml_fuse_record_thread_registration_failure();
+      return -1;
+    }
+  }
+
+  caml_acquire_runtime_system();
+  return 0;
+}
+
+static void ml_fuse_leave_ocaml_callback() { caml_release_runtime_system(); }
+
 #define DECLARE_OP_CLOSURE(OPNAME) static const value *OPNAME##_closure = NULL;
 FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 
@@ -875,9 +982,11 @@ static void *gm281_ops_init(struct fuse_conn_info *conn,
 }
 
 static void *ops_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
-  caml_acquire_runtime_system();
+  if (ml_fuse_enter_ocaml_callback() != 0)
+    return NULL;
+
   void *ret = gm281_ops_init(conn, cfg);
-  caml_release_runtime_system();
+  ml_fuse_leave_ocaml_callback();
   return ret;
 }
 
@@ -902,9 +1011,10 @@ static void *ops_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
   }                                                                            \
                                                                                \
   static OPNAME##_RTYPE ops_##OPNAME OPNAME##_ARGS {                           \
-    caml_acquire_runtime_system();                                             \
+    if (ml_fuse_enter_ocaml_callback() != 0)                                   \
+      return (OPNAME##_RTYPE) - EIO;                                           \
     OPNAME##_RTYPE ret = gm281_ops_##OPNAME OPNAME##_CALL_ARGS;                \
-    caml_release_runtime_system();                                             \
+    ml_fuse_leave_ocaml_callback();                                            \
     return ret;                                                                \
   }
 
@@ -940,9 +1050,16 @@ enum ml_fuse_main_status {
   ML_FUSE_MAIN_DAEMONIZE = 5,
   ML_FUSE_MAIN_SIGNAL_HANDLERS = 6,
   ML_FUSE_MAIN_LOOP = 7,
+  ML_FUSE_MAIN_THREAD_REGISTRATION = 8,
 };
 
-int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op) {
+enum ml_fuse_loop_mode {
+  ML_FUSE_LOOP_SINGLE_THREADED = 0,
+  ML_FUSE_LOOP_MULTI_THREADED = 1,
+};
+
+int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op,
+                 int loop_mode) {
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
   struct fuse_cmdline_opts opts;
   struct fuse *fuse = NULL;
@@ -976,6 +1093,9 @@ int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op) {
     goto out_opts;
   }
 
+  if (opts.singlethread)
+    loop_mode = ML_FUSE_LOOP_SINGLE_THREADED;
+
   fuse = fuse_new(&args, op, sizeof(*op), NULL);
   if (fuse == NULL) {
     status = ML_FUSE_MAIN_NEW;
@@ -1000,12 +1120,24 @@ int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op) {
   }
   signal_handlers_set = 1;
 
+  ml_fuse_reset_thread_registration_failure();
+  if (ml_fuse_mark_ocaml_thread() != 0) {
+    status = ML_FUSE_MAIN_THREAD_REGISTRATION;
+    goto out_unmount;
+  }
+
   caml_release_runtime_system();
-  loop_result = fuse_loop(fuse);
+  if (loop_mode == ML_FUSE_LOOP_MULTI_THREADED)
+    loop_result = fuse_loop_mt(fuse, opts.clone_fd);
+  else
+    loop_result = fuse_loop(fuse);
   caml_acquire_runtime_system();
+  ml_fuse_clear_thread_kind();
 
   if (loop_result != 0)
     status = ML_FUSE_MAIN_LOOP;
+  else if (ml_fuse_thread_registration_has_failed())
+    status = ML_FUSE_MAIN_THREAD_REGISTRATION;
 
 out_unmount:
   if (signal_handlers_set)

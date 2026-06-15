@@ -29,6 +29,8 @@ Notable native API changes include:
 - `readdir` receives request flags and returns `dir_entry` values;
 - `utimens` replaces the old float timestamp callback and uses nanosecond
   timestamps plus `Now` and `Omit` sentinels.
+- `Fuse.main` and `Fuse.Fuse_compat.main` accept `?loop_mode`, defaulting to
+  `Single_threaded`.
 
 ## Compatibility API
 
@@ -47,19 +49,22 @@ Compatibility limits are intentional:
 
 ## Runtime Behavior
 
-The current runtime uses the high-level single-threaded `fuse_loop` path. The
+The default runtime uses the high-level single-threaded `fuse_loop` path. The
 binding keeps the FUSE process foreground-oriented and releases the OCaml
-runtime while blocked in the FUSE loop. Callback wrappers reacquire the runtime
-before calling OCaml callbacks.
+runtime while blocked in the FUSE loop.
 
-Support for the libfuse worker-thread loop remains unimplemented. The current
-analysis recommends adding it only as an explicit opt-in mode.
+Users can opt into libfuse's worker-thread loop with
+`~loop_mode:Multi_threaded`. In that mode the binding calls `fuse_loop_mt` and
+registers libfuse-created worker threads with the OCaml runtime before running
+OCaml callbacks. FUSE `-s` still forces the single-threaded path.
 
 ## Tests
 
-`make test` runs the mounted smoke suite when FUSE is available. `make e2e`
-runs the full mounted suite, including coverage for the native FUSE 3 callback
-shape, xattrs, `utimens`, and rename flags.
+`make test` runs unit and compile checks. `make e2e-smoke-test` runs the
+mounted smoke suite when FUSE is available. `make e2e` runs the full mounted
+suite, including coverage for the native FUSE 3 callback shape, xattrs,
+`utimens`, and rename flags. `make e2e-multithreaded-smoke-test` runs the
+mounted smoke suite with opt-in multithreaded mode.
 
 Mounted tests require Linux, `/dev/fuse`, and permission to mount FUSE
 filesystems. Without FUSE access, the smoke suite prints `SKIP` unless

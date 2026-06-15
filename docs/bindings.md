@@ -35,22 +35,29 @@ linker flags that might use another FUSE version.
 2. `Fuse.main` registers callback names with camlidl through
    `Fuse_bindings.set_fuse_operations`.
 3. `Fuse_util.c` installs C callback functions in a `struct fuse_operations`.
-4. `ml_fuse_main` parses FUSE command-line options, creates a high-level FUSE
-   handle, mounts it, installs signal handlers, and enters `fuse_loop`.
+4. `ml_fuse_main` parses FUSE command-line options, computes the effective loop
+   mode, creates a high-level FUSE handle, mounts it, installs signal handlers,
+   and enters `fuse_loop` or `fuse_loop_mt`.
 5. libfuse calls the installed C callbacks.
-6. The C callbacks acquire the OCaml runtime, convert arguments, call the
+6. The C callbacks make sure the current thread is registered with the OCaml
+   runtime when needed, acquire the OCaml runtime, convert arguments, call the
    registered OCaml callbacks, convert results or errors, then return libfuse
    status codes.
 7. `ml_fuse_main` removes signal handlers, unmounts, destroys the FUSE handle,
    and releases parsed command-line resources.
 
-The FUSE loop releases the OCaml runtime while blocked in `fuse_loop`, then
-reacquires it before returning to OCaml. Callback wrappers are responsible for
-acquiring the runtime before invoking OCaml callbacks.
+The FUSE loop releases the OCaml runtime while blocked in `fuse_loop` or
+`fuse_loop_mt`, then reacquires it before returning to OCaml. Callback wrappers
+are responsible for acquiring the runtime before invoking OCaml callbacks.
 
-The current runtime path uses the single-threaded high-level loop. The
-multithreaded libfuse loop analysis is in
-`docs/plans/fuse3/m6-analysis.md`; implementation is not started.
+The default runtime path uses the single-threaded high-level loop.
+`Fuse.main ?loop_mode` and `Fuse.Fuse_compat.main ?loop_mode` can opt into
+libfuse's multithreaded loop. In multithreaded mode, libfuse creates worker
+threads; the binding registers those foreign threads with the OCaml runtime on
+callback entry and unregisters them when the worker thread exits. OCaml callback
+execution is still serialized by the OCaml runtime lock, but callback
+interleaving can happen around blocking C or Unix calls. FUSE `-s` forces the
+effective runtime path back to single-threaded mode.
 
 ## Public API Shape
 
@@ -80,8 +87,8 @@ overflow checks.
   flags.
 - `lib/Fuse_util.c`: owns FUSE lifecycle integration, callback wrappers, errno
   conversion, stat/statvfs conversion, xattr conversion, FUSE 3 file-info
-  conversion, rename flag conversion, readdir conversion, and timestamp
-  conversion.
+  conversion, rename flag conversion, readdir conversion, timestamp conversion,
+  and libfuse worker-thread registration.
 - `lib/Fuse.ml` and `lib/Fuse.mli`: expose the native public operation record,
   `Fuse.main`, and the nested `Fuse.Fuse_compat` module.
 - `lib/Fuse_lib.ml`: registers OCaml callbacks and maps exceptions to

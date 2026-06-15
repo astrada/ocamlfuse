@@ -57,10 +57,16 @@ Build the examples:
 make example
 ```
 
-Run the smoke test:
+Run the unit and compile checks:
 
 ```sh
 make test
+```
+
+Run the mounted smoke test:
+
+```sh
+make e2e-smoke-test
 ```
 
 Run the full mounted end-to-end suite:
@@ -70,9 +76,9 @@ make e2e
 ```
 
 The mounted tests require Linux, `/dev/fuse` access, and permission to mount
-FUSE filesystems. When FUSE access is unavailable, `make test` prints `SKIP`
-and exits successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE
-support a failure.
+FUSE filesystems. When FUSE access is unavailable, `make e2e-smoke-test` prints
+`SKIP` and exits successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make
+missing FUSE support a failure.
 
 ## Examples
 
@@ -117,9 +123,11 @@ parameters, reject unsupported rename flags with `EINVAL`, reject timestamp
 sentinels that old `utime` callbacks cannot represent, and convert file handles
 back to `int` with overflow checks.
 
-The current FUSE loop is single-threaded and foreground-oriented. The
-multithreaded libfuse loop analysis is tracked in
-`docs/plans/fuse3/m6-analysis.md`; implementation is not started.
+The default FUSE loop is single-threaded and foreground-oriented. Users can opt
+into libfuse's multithreaded loop with `~loop_mode:Multi_threaded`. In that
+mode, libfuse owns worker threads and the binding registers those threads with
+the OCaml runtime before invoking OCaml callbacks. FUSE `-s` still forces the
+single-threaded path.
 
 ## Documentation
 

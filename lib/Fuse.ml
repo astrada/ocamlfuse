@@ -94,6 +94,7 @@ type dir_entry = {
 
 type timespec = { tv_sec : int64; tv_nsec : int }
 type timestamp = Time of timespec | Now | Omit
+type loop_mode = Single_threaded | Multi_threaded
 
 type operations = {
   init : unit -> unit;
@@ -196,11 +197,16 @@ let default_operations =
     removexattr = undefined;
   }
 
-let main argv ops =
+let int_of_loop_mode = function Single_threaded -> 0 | Multi_threaded -> 1
+
+let main ?(loop_mode = Single_threaded) argv ops =
   Fuse_bindings.ml_fuse_init ();
   Fuse_bindings.set_fuse_operations (op_names_of_operations ops);
+  let loop_mode = int_of_loop_mode loop_mode in
   match
-    Fuse_bindings.ml_fuse_main argv (Fuse_bindings.get_fuse_operations ())
+    Fuse_bindings.ml_fuse_main argv
+      (Fuse_bindings.get_fuse_operations ())
+      loop_mode
   with
   | 0 -> ()
   | 1 -> failwith "fuse command-line parsing failed"
@@ -210,6 +216,7 @@ let main argv ops =
   | 5 -> failwith "fuse_daemonize failed"
   | 6 -> failwith "fuse_set_signal_handlers failed"
   | 7 -> failwith "fuse_loop failed"
+  | 8 -> failwith "fuse worker thread registration failed"
   | status -> failwith ("fuse failed with status " ^ string_of_int status)
 
 let fuse3_main = main
@@ -309,8 +316,8 @@ module Fuse_compat = struct
         Int64.to_float tv_sec +. (float tv_nsec /. 1_000_000_000.0)
     | Now | Omit -> raise (Unix.Unix_error (Unix.EINVAL, fn, path))
 
-  let main argv ops =
-    fuse3_main argv
+  let main ?loop_mode argv ops =
+    fuse3_main ?loop_mode argv
       {
         init = ops.init;
         getattr =

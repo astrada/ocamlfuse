@@ -176,8 +176,8 @@ tools/format_ocaml lib/Fuse.ml lib/Fuse.mli lib/Fuse_lib.ml
 tools/format_c lib/Fuse_util.c
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
-make test
+make e2e-smoke-test
 ```
 
-`make test` builds the test binaries and exits successfully with
+`make e2e-smoke-test` builds the test binaries and exits successfully with
 `SKIP: /dev/fuse is not available` in the sandbox environment.

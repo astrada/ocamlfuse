@@ -196,10 +196,10 @@ tools/format_c lib/Fuse_util.c
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
 dune build test/e2e/testfs.exe test/e2e/client.exe
-make test
+make e2e-smoke-test
 ```
 
-`make test` was run outside the sandbox on a host with `/dev/fuse` access and
+`make e2e-smoke-test` was run outside the sandbox on a host with `/dev/fuse` access and
 passed the smoke suite.
 
 The old temporary M2 callback API no longer appears in the main API:
