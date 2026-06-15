@@ -394,7 +394,7 @@ git diff --check
 
 ## M10: Multithreaded e2e Test Suite
 
-Status: planned; recommendations accepted. See `m10-plan.md`.
+Status: complete. See `m10-plan.md`.
 
 Broaden mounted coverage for `Fuse.Multi_threaded` beyond the existing smoke
 test.

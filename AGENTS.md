@@ -32,6 +32,7 @@ sources instead.
 - Run the smoke test: `make e2e-smoke-test`.
 - Run the multithreaded smoke test: `make e2e-multithreaded-smoke-test`.
 - Run the full end-to-end suite: `make e2e` or `test/e2e/run.sh full`.
+- Run the full multithreaded end-to-end suite: `make e2e-multithreaded`.
 - Format tracked OCaml sources: `tools/format_ocaml`.
 - Format selected OCaml sources: `tools/format_ocaml path/to/file.ml
 path/to/file.mli`.
@@ -48,12 +49,12 @@ behavior changes, run `make e2e-smoke-test` outside the sandbox.
 when FUSE is available. If FUSE is unavailable, it prints `SKIP` and exits
 successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make missing FUSE support a
 failure.
-For loop-mode changes, also run `make e2e-multithreaded-smoke-test` outside the
-sandbox.
+For loop-mode changes, also run `make e2e-multithreaded-smoke-test` and
+`make e2e-multithreaded` outside the sandbox.
 
-The e2e tests (`make e2e-smoke-test`, `make e2e`, `make
-e2e-multithreaded-smoke-test`) should be run outside the sandbox, because inside
-the sandbox `/dev/fuse` is not accessible.
+The e2e tests (`make e2e-smoke-test`, `make e2e`,
+`make e2e-multithreaded-smoke-test`, `make e2e-multithreaded`) should be run
+outside the sandbox, because inside the sandbox `/dev/fuse` is not accessible.
 
 Running the examples mounts FUSE filesystems and requires a working libfuse
 runtime, `/dev/fuse` access, and mount permissions. Do not assume those are
@@ -81,7 +82,8 @@ equivalent.
   native `Fuse` backing filesystem, `client.ml` contains OUnit2 assertions,
   `xattr_stubs.c` provides Linux xattr, timestamp, and rename helpers,
   `compat_compile.ml` compile-checks `Fuse.Fuse_compat`, and `run.sh` mounts,
-  tests, and cleans up.
+  tests, and cleans up. The multithreaded full suite includes a deterministic
+  blocked-callback concurrency check.
 - `tools/format_ocaml`: repository formatter wrapper for `.ml` and `.mli`
   files. It requires `ocamlformat` in `PATH`.
 - `tools/format_c`: repository formatter wrapper for `.c` and `.h` files. It

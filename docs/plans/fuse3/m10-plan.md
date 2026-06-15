@@ -1,6 +1,6 @@
 # M10 Plan: Multithreaded e2e Test Suite
 
-Status: planned; recommendations accepted.
+Status: complete.
 
 Depends on M9, which renamed the public package and Dune library to `fuse3`.
 
@@ -16,6 +16,14 @@ current smoke test. M10 should prove both:
 
 This milestone is test coverage only. It should not change the public OCaml API,
 the default loop mode, or callback semantics.
+
+## Result
+
+M10 added `make e2e-multithreaded`, which runs the full mounted e2e suite with
+`OCAMLFUSE_E2E_LOOP_MODE=multi`. The multithreaded full suite includes a
+deterministic concurrency test: one callback blocks on an external FIFO while
+the client proves a second mounted request can complete before releasing the
+blocked callback.
 
 ## Current State
 

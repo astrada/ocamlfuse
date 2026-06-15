@@ -75,6 +75,12 @@ Run the full mounted end-to-end suite:
 make e2e
 ```
 
+Run the full mounted end-to-end suite in multithreaded mode:
+
+```sh
+make e2e-multithreaded
+```
+
 The mounted tests require Linux, `/dev/fuse` access, and permission to mount
 FUSE filesystems. When FUSE access is unavailable, `make e2e-smoke-test` prints
 `SKIP` and exits successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make

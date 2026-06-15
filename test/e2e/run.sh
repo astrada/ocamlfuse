@@ -76,13 +76,17 @@ fi
 tmp_root=$(mktemp -d "${TMPDIR:-/tmp}/ocamlfuse-e2e.XXXXXX")
 backing_root="$tmp_root/backing"
 mountpoint="$tmp_root/mnt"
+mt_control_dir="$tmp_root/mt"
+mt_block_marker="$mt_control_dir/block.marker"
+mt_release_fifo="$mt_control_dir/release.fifo"
 callback_log="$tmp_root/callbacks.log"
 ready_marker="$tmp_root/ready"
 testfs_stdout="$tmp_root/testfs.stdout"
 testfs_stderr="$tmp_root/testfs.stderr"
 fs_pid=
 
-mkdir "$backing_root" "$mountpoint"
+mkdir "$backing_root" "$mountpoint" "$mt_control_dir"
+mkfifo "$mt_release_fifo"
 touch "$callback_log"
 
 cleanup() {
@@ -121,6 +125,8 @@ OCAMLFUSE_E2E_BACKING_ROOT="$backing_root" \
 OCAMLFUSE_E2E_LOG="$callback_log" \
 OCAMLFUSE_E2E_READY="$ready_marker" \
 OCAMLFUSE_E2E_LOOP_MODE="$loop_mode" \
+OCAMLFUSE_E2E_MT_BLOCK_MARKER="$mt_block_marker" \
+OCAMLFUSE_E2E_MT_RELEASE_FIFO="$mt_release_fifo" \
   _build/default/test/e2e/testfs.exe "${fuse_args[@]}" \
     >"$testfs_stdout" 2>"$testfs_stderr" &
 fs_pid=$!
@@ -152,6 +158,8 @@ OCAMLFUSE_E2E_MODE="$mode" \
 OCAMLFUSE_E2E_MOUNTPOINT="$mountpoint" \
 OCAMLFUSE_E2E_LOG="$callback_log" \
 OCAMLFUSE_E2E_LOOP_MODE="$loop_mode" \
+OCAMLFUSE_E2E_MT_BLOCK_MARKER="$mt_block_marker" \
+OCAMLFUSE_E2E_MT_RELEASE_FIFO="$mt_release_fifo" \
   run_with_timeout 30 _build/default/test/e2e/client.exe
 status=$?
 set -e

@@ -4,7 +4,7 @@
 
 (executable
  (name client)
- (libraries fuse3 unix ounit2)
+ (libraries fuse3 unix threads ounit2)
  (foreign_stubs
   (language c)
   (names xattr_stubs)))

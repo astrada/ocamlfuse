@@ -5,9 +5,17 @@ let getenv_required name =
   with Not_found -> failwith ("missing required environment variable: " ^ name)
 
 let mode = try Sys.getenv "OCAMLFUSE_E2E_MODE" with Not_found -> "smoke"
+
+let loop_mode =
+  try Sys.getenv "OCAMLFUSE_E2E_LOOP_MODE" with Not_found -> "single"
+
 let mountpoint = getenv_required "OCAMLFUSE_E2E_MOUNTPOINT"
 let log_path = getenv_required "OCAMLFUSE_E2E_LOG"
+let mt_block_marker = Sys.getenv_opt "OCAMLFUSE_E2E_MT_BLOCK_MARKER"
+let mt_release_fifo = Sys.getenv_opt "OCAMLFUSE_E2E_MT_RELEASE_FIFO"
 let prefix = Printf.sprintf "ocamlfuse_e2e_%d" (Unix.getpid ())
+let mt_blocking_read_name = "__ocamlfuse_e2e_blocking_read"
+let mt_blocking_read_payload = "multithreaded read released\n"
 
 external setxattr : string -> string -> string -> unit
   = "ocamlfuse_e2e_setxattr"
@@ -44,6 +52,28 @@ let assert_event event =
   assert_bool ("expected callback event: " ^ event) (has_event event)
 
 let assert_events events = List.iter assert_event events
+
+let with_mutex mutex f =
+  Mutex.lock mutex;
+  try
+    let result = f () in
+    Mutex.unlock mutex;
+    result
+  with exn ->
+    Mutex.unlock mutex;
+    raise exn
+
+let wait_until ?(seconds = 5.0) label predicate =
+  let deadline = Unix.gettimeofday () +. seconds in
+  let rec loop () =
+    if predicate () then ()
+    else if Unix.gettimeofday () >= deadline then
+      assert_failure ("timed out waiting for " ^ label)
+    else (
+      Thread.delay 0.02;
+      loop ())
+  in
+  loop ()
 
 let write_all fd contents =
   let bytes = Bytes.of_string contents in
@@ -263,6 +293,76 @@ let xattr_test _ctxt =
   remove_if_exists file;
   assert_events [ "setxattr"; "getxattr"; "listxattr"; "removexattr" ]
 
+let multithreaded_control_paths () =
+  match (mt_block_marker, mt_release_fifo) with
+  | Some marker, Some fifo -> (marker, fifo)
+  | _ -> failwith "missing multithreaded e2e control paths"
+
+let read_blocking_file () =
+  let file = path mt_blocking_read_name in
+  with_fd file [ Unix.O_RDONLY ] 0 (fun fd ->
+      let bytes = Bytes.create 128 in
+      let length = Unix.read fd bytes 0 (Bytes.length bytes) in
+      Bytes.sub_string bytes 0 length)
+
+let release_blocking_read fifo =
+  with_fd fifo [ Unix.O_WRONLY; Unix.O_NONBLOCK ] 0 (fun fd -> write_all fd "x")
+
+let multithreaded_concurrency_test _ctxt =
+  let marker, fifo = multithreaded_control_paths () in
+  remove_if_exists marker;
+  let result_mutex = Mutex.create () in
+  let reader_result = ref None in
+  let set_reader_result result =
+    with_mutex result_mutex (fun () -> reader_result := Some result)
+  in
+  let get_reader_result () =
+    with_mutex result_mutex (fun () -> !reader_result)
+  in
+  let reader =
+    Thread.create
+      (fun () ->
+        try set_reader_result (Ok (read_blocking_file ()))
+        with exn -> set_reader_result (Error exn))
+      ()
+  in
+  let reader_finished () =
+    match get_reader_result () with Some _ -> true | None -> false
+  in
+  try
+    wait_until "blocked read marker" (fun () ->
+        Sys.file_exists marker || reader_finished ());
+    (match get_reader_result () with
+    | Some (Ok _) ->
+        assert_failure "blocking read completed before the release signal"
+    | Some (Error exn) -> raise exn
+    | None -> ());
+    assert_event "mt-block-read-enter";
+    let file = path (prefix ^ "_mt_concurrent.txt") in
+    remove_if_exists file;
+    write_file file "concurrent request";
+    assert_equal "concurrent request" (read_file file);
+    remove_if_exists file;
+    assert_bool "blocking read should still be waiting before release"
+      (not (has_event "mt-block-read-leave"));
+    release_blocking_read fifo;
+    wait_until "blocked read completion" reader_finished;
+    Thread.join reader;
+    match get_reader_result () with
+    | Some (Ok payload) ->
+        assert_equal mt_blocking_read_payload payload;
+        assert_event "mt-block-read-leave";
+        assert_events [ "mknod"; "fopen"; "write"; "read"; "release" ]
+    | Some (Error exn) -> raise exn
+    | None -> assert_failure "blocking read thread did not report a result"
+  with exn ->
+    if Sys.file_exists marker then (
+      (try release_blocking_read fifo with _ -> ());
+      try wait_until ~seconds:1.0 "blocked read cleanup" reader_finished
+      with _ -> ());
+    if reader_finished () then Thread.join reader;
+    raise exn
+
 let full_tests =
   [
     "smoke" >:: smoke_test;
@@ -278,10 +378,16 @@ let full_tests =
 
 let smoke_tests = [ "smoke" >:: smoke_test ]
 
+let tests_for_mode =
+  if mode = "full" && loop_mode = "multi" then
+    full_tests
+    @ [ "multithreaded-concurrency" >:: multithreaded_concurrency_test ]
+  else full_tests
+
 let tests =
   match mode with
   | "smoke" -> smoke_tests
-  | "full" -> full_tests
+  | "full" -> tests_for_mode
   | other -> failwith ("unknown OCAMLFUSE_E2E_MODE: " ^ other)
 
 let () = run_test_tt_main ("ocamlfuse-e2e" >::: tests)

@@ -71,7 +71,9 @@ OCaml callbacks. FUSE `-s` still forces the single-threaded path.
 mounted smoke suite when FUSE is available. `make e2e` runs the full mounted
 suite, including coverage for the native FUSE 3 callback shape, xattrs,
 `utimens`, and rename flags. `make e2e-multithreaded-smoke-test` runs the
-mounted smoke suite with opt-in multithreaded mode.
+mounted smoke suite with opt-in multithreaded mode. `make e2e-multithreaded`
+runs the full mounted suite with opt-in multithreaded mode, including a
+deterministic blocked-callback concurrency check.
 
 Mounted tests require Linux, `/dev/fuse`, and permission to mount FUSE
 filesystems. Without FUSE access, the smoke suite prints `SKIP` unless

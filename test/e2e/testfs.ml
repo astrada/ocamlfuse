@@ -8,7 +8,11 @@ let getenv_required name =
 let backing_root = getenv_required "OCAMLFUSE_E2E_BACKING_ROOT"
 let log_path = getenv_required "OCAMLFUSE_E2E_LOG"
 let ready_path = getenv_required "OCAMLFUSE_E2E_READY"
+let mt_block_marker = Sys.getenv_opt "OCAMLFUSE_E2E_MT_BLOCK_MARKER"
+let mt_release_fifo = Sys.getenv_opt "OCAMLFUSE_E2E_MT_RELEASE_FIFO"
 let raise_unix err fn path = raise (Unix_error (err, fn, path))
+let mt_blocking_read_path = "/__ocamlfuse_e2e_blocking_read"
+let mt_blocking_read_payload = "multithreaded read released\n"
 
 let loop_mode =
   match Sys.getenv_opt "OCAMLFUSE_E2E_LOOP_MODE" with
@@ -62,6 +66,52 @@ let log event =
         close_out_noerr channel;
         raise exn)
 
+let touch path =
+  let channel = open_out path in
+  try close_out channel
+  with exn ->
+    close_out_noerr channel;
+    raise exn
+
+let blocking_read_mutex = Mutex.create ()
+let blocking_read_has_blocked = ref false
+
+let should_block_read_once () =
+  with_mutex blocking_read_mutex (fun () ->
+      if !blocking_read_has_blocked then false
+      else (
+        blocking_read_has_blocked := true;
+        true))
+
+let control_paths fn path =
+  match (mt_block_marker, mt_release_fifo) with
+  | Some marker, Some fifo -> (marker, fifo)
+  | _ -> raise_unix ENOENT fn path
+
+let wait_for_release_fifo fifo =
+  let fd = Unix.openfile fifo [ O_RDONLY ] 0 in
+  try
+    let byte = Bytes.create 1 in
+    ignore (Unix.read fd byte 0 1);
+    Unix.close fd
+  with exn ->
+    Unix.close fd;
+    raise exn
+
+let read_payload payload buf offset =
+  let payload_len = String.length payload in
+  let offset =
+    if offset < 0L || offset > Int64.of_int max_int then payload_len
+    else Int64.to_int offset
+  in
+  if offset >= payload_len then 0
+  else
+    let length = min (Bigarray.Array1.dim buf) (payload_len - offset) in
+    for i = 0 to length - 1 do
+      Bigarray.Array1.set buf i payload.[offset + i]
+    done;
+    length
+
 let store_descr fd = Int64.of_int (Unix_util.int_of_file_descr fd)
 
 let retrieve_descr fd =
@@ -110,6 +160,27 @@ let rename_noreplace old_path new_path =
     raise_unix EEXIST "rename" new_path
   else Unix.rename (real_path old_path) (real_path new_path)
 
+let is_mt_blocking_read path = path = mt_blocking_read_path
+
+let blocking_read_stats () =
+  let stats = Unix.LargeFile.lstat backing_root in
+  {
+    stats with
+    Unix.LargeFile.st_kind = S_REG;
+    st_perm = 0o444;
+    st_nlink = 1;
+    st_size = Int64.of_int (String.length mt_blocking_read_payload);
+  }
+
+let blocking_read path buf offset =
+  let marker, fifo = control_paths "read" path in
+  if should_block_read_once () then (
+    log "mt-block-read-enter";
+    touch marker;
+    wait_for_release_fifo fifo;
+    log "mt-block-read-leave");
+  read_payload mt_blocking_read_payload buf offset
+
 let test_operations =
   {
     init =
@@ -121,7 +192,8 @@ let test_operations =
     getattr =
       (fun path _fi ->
         log "getattr";
-        Unix.LargeFile.lstat (real_path path));
+        if is_mt_blocking_read path then blocking_read_stats ()
+        else Unix.LargeFile.lstat (real_path path));
     readlink =
       (fun path ->
         log "readlink";
@@ -185,16 +257,20 @@ let test_operations =
     fopen =
       (fun path fi ->
         log "fopen";
-        let fd =
-          Unix.openfile (real_path path) (flags_or_readonly fi.fi_flags) 0o666
-        in
-        file_info_update_of_descr fd);
+        if is_mt_blocking_read path then default_file_info_update
+        else
+          let fd =
+            Unix.openfile (real_path path) (flags_or_readonly fi.fi_flags) 0o666
+          in
+          file_info_update_of_descr fd);
     read =
-      (fun _path buf offset fi ->
+      (fun path buf offset fi ->
         log "read";
-        let file_descr = retrieve_descr fi.fi_fh in
-        ignore (Unix.LargeFile.lseek file_descr offset SEEK_SET);
-        Unix_util.read file_descr buf);
+        if is_mt_blocking_read path then blocking_read path buf offset
+        else
+          let file_descr = retrieve_descr fi.fi_fh in
+          ignore (Unix.LargeFile.lseek file_descr offset SEEK_SET);
+          Unix_util.read file_descr buf);
     write =
       (fun _path buf offset fi ->
         log "write";
@@ -210,9 +286,10 @@ let test_operations =
         log "flush";
         ());
     release =
-      (fun _path fi ->
+      (fun path fi ->
         log "release";
-        Unix.close (retrieve_descr fi.fi_fh));
+        if is_mt_blocking_read path then ()
+        else Unix.close (retrieve_descr fi.fi_fh));
     fsync =
       (fun _path _isdatasync fi ->
         log "fsync";

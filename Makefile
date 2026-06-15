@@ -26,6 +26,10 @@ e2e-multithreaded-smoke-test:
 	@dune build @install
 	@OCAMLFUSE_E2E_LOOP_MODE=multi test/e2e/run.sh smoke
 
+e2e-multithreaded:
+	@dune build @install
+	@OCAMLFUSE_E2E_LOOP_MODE=multi test/e2e/run.sh full
+
 e2e:
 	@dune build @install
 	@test/e2e/run.sh full
@@ -36,4 +40,4 @@ format:
 format-c:
 	tools/format_c $(FILES)
 
-.PHONY: build install uninstall clean example test e2e-smoke-test e2e-multithreaded-smoke-test e2e format format-c
+.PHONY: build install uninstall clean example test e2e-smoke-test e2e-multithreaded-smoke-test e2e-multithreaded e2e format format-c
