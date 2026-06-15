@@ -22,6 +22,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
   metadata, dead code, comments, and documentation consistency.
 - `m9-plan.md`: completed public package rename from `ocamlfuse3` to `fuse3`.
 - `m10-plan.md`: completed mounted e2e suite for the multithreaded loop mode.
+- `m11-plan.md`: planned switch to multithreaded loop mode by default, with
+  decisions accepted.
 - `ocaml-libfuse3-bindings.md`: supplemental external-analysis notes about
   libfuse-created threads and OCaml runtime registration.
 - `api-delta.md`: known callback and lifecycle differences that affect the
@@ -32,7 +34,8 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0 through M10 are complete.
+M0 through M10 are complete. M11 is planned with decisions accepted and ready to
+implement.
 
 ## Primary References
 

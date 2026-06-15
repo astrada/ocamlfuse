@@ -437,3 +437,51 @@ make e2e-multithreaded-smoke-test
 make e2e-multithreaded
 OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-multithreaded
 ```
+
+## M11: Default To Multithreaded Loop Mode
+
+Status: planned; decisions accepted. See `m11-plan.md`.
+
+Switch the public default runtime from single-threaded `fuse_loop` to
+libfuse's multithreaded `fuse_loop_mt`.
+
+Tasks:
+
+- Change `Fuse.main` default `?loop_mode` to `Multi_threaded`.
+- Keep `Fuse.Fuse_compat.main` inheriting the same default.
+- Add an e2e `default` loop mode that calls `Fuse.main` without `~loop_mode`.
+- Keep explicit `single` and `multi` e2e modes.
+- Add explicit single-threaded Makefile targets.
+- Update active docs and release notes.
+
+Exit criteria:
+
+- `Fuse.main argv ops` defaults to `fuse_loop_mt`.
+- Explicit `~loop_mode:Single_threaded` still routes through `fuse_loop`.
+- FUSE `-s` still forces `fuse_loop`.
+- Default mounted e2e targets exercise the public default.
+- Explicit single-threaded and multithreaded mounted targets pass.
+- Active docs describe multithreaded mode as default.
+
+Verification:
+
+```sh
+tools/format_ocaml lib/Fuse.ml test/e2e/testfs.ml test/e2e/client.ml test/unit/*.ml
+dune build @install
+make test
+dune build test/e2e/testfs.exe test/e2e/client.exe test/e2e/compat_compile.exe
+git diff --check
+```
+
+Run mounted checks outside the sandbox:
+
+```sh
+make e2e-smoke-test
+make e2e
+make e2e-single-threaded-smoke-test
+make e2e-single-threaded
+make e2e-multithreaded-smoke-test
+make e2e-multithreaded
+OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e
+OCAMLFUSE_E2E_REQUIRE_FUSE=1 make e2e-single-threaded
+```
