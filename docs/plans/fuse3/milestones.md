@@ -229,7 +229,7 @@ explicitly identified as historical context.
 
 ## M6: Multithreaded Loop Analysis
 
-Status: analysis complete; implementation is not started. See
+Status: analysis complete; implementation followed in M7. See
 `m6-analysis.md`.
 
 Analyze whether and how `ocamlfuse3` should support a multithreaded libfuse
@@ -305,6 +305,51 @@ tools/format_c lib/Fuse_util.c
 dune build conf-libfuse3.opam ocamlfuse3.opam
 dune build @install
 dune build example/hello.exe example/fusexmp.exe
+make e2e-smoke-test
+make e2e-multithreaded-smoke-test
+make e2e
+```
+
+## M8: Cleanup Pass
+
+Status: planned. See `m8-plan.md`.
+
+Clean up stale migration leftovers after M7 without changing runtime behavior or
+the public FUSE callback API.
+
+Tasks:
+
+- Keep `make test` as the unit and compile-check target.
+- Keep mounted smoke coverage under `make e2e-smoke-test`.
+- Raise the minimum OCaml version to `4.08.0`.
+- Audit and remove `lib/Thread_pool.ml` and `lib/Thread_pool.mli`.
+- Remove or rewrite stale FUSE 2-era comments that no longer describe the
+  current FUSE 3 binding.
+- Update active docs and release notes so they match the post-M7 state.
+
+Exit criteria:
+
+- `make test` runs unit and compile checks only.
+- Mounted smoke tests remain available through `make e2e-smoke-test`.
+- Package metadata and README require OCaml `>= 4.08.0`.
+- Active docs no longer describe M7 multithreaded support as future work.
+- `Thread_pool` is removed, unless the implementation audit finds a documented
+  public API blocker.
+- No public callback API changes are made.
+
+Verification:
+
+```sh
+dune build conf-libfuse3.opam ocamlfuse3.opam
+dune build @install
+make test
+dune build example/hello.exe example/fusexmp.exe
+git diff --check
+```
+
+Run mounted checks outside the sandbox if runtime or e2e files change:
+
+```sh
 make e2e-smoke-test
 make e2e-multithreaded-smoke-test
 make e2e
