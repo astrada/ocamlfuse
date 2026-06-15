@@ -264,3 +264,48 @@ Verification:
 ```sh
 rg -n "fuse_loop_mt|caml_c_thread_register|Thread_pool|single-thread|multithread" lib docs
 ```
+
+## M7: Opt-In libfuse Multithreaded Loop
+
+Status: planned. See `m7-plan.md`.
+
+Implement opt-in multithreaded support with libfuse's high-level
+`fuse_loop_mt(fuse, opts.clone_fd)` path and OCaml foreign-thread registration.
+
+Tasks:
+
+- Add public `loop_mode = Single_threaded | Multi_threaded`.
+- Add `?loop_mode` to `Fuse.main` and `Fuse.Fuse_compat.main`.
+- Extend `ml_fuse_main` to receive the requested loop mode.
+- Preserve the existing `fuse_loop` path for effective `Single_threaded`.
+- Use `fuse_loop_mt(fuse, opts.clone_fd)` for effective `Multi_threaded`.
+- Keep FUSE `-s` as a force-single-thread override.
+- Add pthread TLS markers for OCaml-owned versus binding-registered threads.
+- Register libfuse worker threads with `caml_c_thread_register` before
+  acquiring the OCaml runtime.
+- Unregister binding-registered worker threads from a pthread-key destructor.
+- Add a mounted multithreaded smoke target.
+
+Exit criteria:
+
+- Existing calls to `Fuse.main argv ops` and `Fuse.Fuse_compat.main argv ops`
+  compile unchanged.
+- Explicit `~loop_mode:Single_threaded` behaves like the current default.
+- Explicit `~loop_mode:Multi_threaded` routes through `fuse_loop_mt`.
+- Libfuse-created callback threads are registered with the OCaml runtime before
+  running OCaml callbacks.
+- Mounted single-threaded and multithreaded smoke tests pass on a FUSE-capable
+  Linux host.
+
+Verification:
+
+```sh
+tools/format_ocaml lib/Fuse.ml lib/Fuse.mli test/e2e/testfs.ml test/unit/*.ml
+tools/format_c lib/Fuse_util.c
+dune build conf-libfuse3.opam ocamlfuse3.opam
+dune build @install
+dune build example/hello.exe example/fusexmp.exe
+make test
+make e2e-multithreaded-smoke-test
+make e2e
+```

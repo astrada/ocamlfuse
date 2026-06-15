@@ -16,6 +16,10 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
   release preparation.
 - `m6-analysis.md`: completed analysis and recommendations for opt-in
   multithreaded loop support.
+- `m7-plan.md`: planned opt-in multithreaded loop implementation using
+  libfuse's `fuse_loop_mt` and OCaml foreign-thread registration.
+- `ocaml-libfuse3-bindings.md`: supplemental external-analysis notes about
+  libfuse-created threads and OCaml runtime registration.
 - `api-delta.md`: known callback and lifecycle differences that affect the
   current binding.
 - `public-api-proposal.md`: OCaml representations for FUSE 3-specific public
@@ -25,7 +29,7 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 ## Status
 
 M0, M1, M2, M3, M4, and M5 are complete. M6 multithreaded-loop analysis is
-complete; implementation is not started.
+complete. M7 is planned as the first opt-in multithreaded-loop implementation.
 
 ## Primary References
 
