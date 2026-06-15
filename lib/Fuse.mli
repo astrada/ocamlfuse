@@ -117,9 +117,7 @@ type operations = {
   readdir : string -> int64 -> file_info -> readdir_flags -> dir_entry list;
   releasedir : string -> file_info -> unit;
   fsyncdir : string -> bool -> file_info -> unit;
-      (* TODO: missing callbacks:
-
-         destroy, access, create, lock, bmap, flag_nullpath_ok, ioctl, poll *)
+      (* Other libfuse 3 high-level callbacks remain intentionally unexposed. *)
 }
 
 val op_names_of_operations : operations -> Fuse_bindings.fuse_operation_names

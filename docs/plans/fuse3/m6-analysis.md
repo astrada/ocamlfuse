@@ -10,26 +10,27 @@ Analyze whether and how `ocamlfuse3` should support libfuse's multithreaded
 high-level event loop while keeping the Ubuntu Jammy/libfuse `3.10` support
 constraint and OCaml runtime rules intact.
 
-## Current Runtime
+## Runtime State After M7
 
-`lib/Fuse_util.c` currently:
+`lib/Fuse_util.c` now:
 
 - parses FUSE command-line options with `fuse_parse_cmdline`;
 - creates a high-level FUSE handle with `fuse_new`;
 - mounts with `fuse_mount`;
 - forces foreground operation with `fuse_daemonize(1)`;
 - installs signal handlers;
-- releases the OCaml runtime while blocked in `fuse_loop`;
-- reacquires the OCaml runtime after `fuse_loop` returns;
+- releases the OCaml runtime while blocked in `fuse_loop` or `fuse_loop_mt`;
+- reacquires the OCaml runtime after the FUSE loop returns;
 - acquires and releases the OCaml runtime in every FUSE callback wrapper before
   calling OCaml.
 
-This means the current binding is single-threaded from libfuse's point of view.
-FUSE waits for one callback to return before invoking another callback.
+The default binding behavior remains single-threaded from libfuse's point of
+view. FUSE waits for one callback to return before invoking another callback.
+User code can opt into libfuse worker-thread dispatch with
+`~loop_mode:Multi_threaded`.
 
-`lib/Thread_pool.ml` still exists, but it is not used by the FUSE 3 lifecycle.
-The current FUSE 3 runtime does not dispatch requests through the OCaml thread
-pool.
+The FUSE 3 runtime does not dispatch requests through an OCaml thread pool. The
+old `lib/Thread_pool.ml` module was removed in M8.
 
 ## Local API Findings
 
@@ -177,9 +178,8 @@ worker-thread creation and request dispatch in `fuse_loop_mt`; the old OCaml
 thread pool does not solve foreign-thread registration and is not part of the
 current runtime path.
 
-When implementing multithreaded support, either leave `Thread_pool` untouched as
-unrelated dead code or remove it in a separate cleanup if no public build
-surface depends on it.
+M8 removed the old thread-pool module as unrelated dead code. Multithreaded
+support uses libfuse-created workers plus OCaml foreign-thread registration.
 
 ## Testing Recommendations
 

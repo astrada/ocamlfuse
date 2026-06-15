@@ -17,7 +17,7 @@ license: "GPL-1.0-or-later"
 bug-reports: "https://github.com/astrada/ocamlfuse/issues"
 depends: [
   "dune" {>= "3.7"}
-  "ocaml" {>= "4.02.3"}
+  "ocaml" {>= "4.08.0"}
   "base-bigarray"
   "base-threads"
   "base-unix"

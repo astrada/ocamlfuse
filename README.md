@@ -12,7 +12,7 @@ The public Dune and opam package is `ocamlfuse3`. The OCaml module remains
 - Linux
 - libfuse `>= 3.10`
 - `pkg-config`
-- OCaml `>= 4.02.3`
+- OCaml `>= 4.08.0`
 - camlidl
 - Dune `>= 3.7`
 

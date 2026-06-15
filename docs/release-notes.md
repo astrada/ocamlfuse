@@ -9,9 +9,13 @@ This release moves the binding to libfuse 3 and renames the public package.
 - The opam and public Dune package is now `ocamlfuse3`.
 - The conf package is now `conf-libfuse3`.
 - The build requires libfuse 3 with minimum version `3.10`.
+- The build requires OCaml `>= 4.08.0`.
 - The first supported platform target is Linux.
 - Build discovery uses `pkg-config fuse3` and does not fall back to another
   FUSE package.
+- The previously installed but unused `Thread_pool` module has been removed.
+  Multithreaded execution uses libfuse worker threads through
+  `~loop_mode:Multi_threaded`.
 
 ## Public API Changes
 

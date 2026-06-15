@@ -312,7 +312,7 @@ make e2e
 
 ## M8: Cleanup Pass
 
-Status: planned. See `m8-plan.md`.
+Status: complete. See `m8-plan.md`.
 
 Clean up stale migration leftovers after M7 without changing runtime behavior or
 the public FUSE callback API.
@@ -333,8 +333,7 @@ Exit criteria:
 - Mounted smoke tests remain available through `make e2e-smoke-test`.
 - Package metadata and README require OCaml `>= 4.08.0`.
 - Active docs no longer describe M7 multithreaded support as future work.
-- `Thread_pool` is removed, unless the implementation audit finds a documented
-  public API blocker.
+- `Thread_pool` is removed.
 - No public callback API changes are made.
 
 Verification:

@@ -18,7 +18,7 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
   multithreaded loop support.
 - `m7-plan.md`: completed opt-in multithreaded loop implementation using
   libfuse's `fuse_loop_mt` and OCaml foreign-thread registration.
-- `m8-plan.md`: planned cleanup pass for stale migration leftovers, package
+- `m8-plan.md`: completed cleanup pass for stale migration leftovers, package
   metadata, dead code, comments, and documentation consistency.
 - `ocaml-libfuse3-bindings.md`: supplemental external-analysis notes about
   libfuse-created threads and OCaml runtime registration.
@@ -30,7 +30,7 @@ This directory tracks the planned migration from libfuse 2 to libfuse 3.
 
 ## Status
 
-M0 through M7 are complete. M8 is planned.
+M0 through M8 are complete.
 
 ## Primary References
 

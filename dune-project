@@ -33,7 +33,7 @@ with simplicity as a goal, as you can see by looking at example/fusexmp.ml.
 The Bigarray library is used for read and write buffers, allowing the library
 to do zero-copy in OCaml land.")
  (depends
-  (ocaml (>= 4.02.3))
+  (ocaml (>= 4.08.0))
   base-bigarray
   base-threads
   base-unix

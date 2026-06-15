@@ -1,6 +1,6 @@
 # M8 Plan: Cleanup Pass
 
-Status: planned; `Thread_pool` removal decision accepted.
+Status: complete.
 
 Depends on M7, which added opt-in `fuse_loop_mt` support and split unit tests
 from mounted e2e smoke tests.
@@ -14,6 +14,14 @@ shape.
 
 M8 should not hide feature work behind cleanup. Runtime behavior, callback
 semantics, and the public FUSE callback API should remain unchanged.
+
+## Result
+
+M8 raised the minimum OCaml version to `4.08.0`, removed the unused
+`Thread_pool` module, cleaned stale callback-scope comments, and updated active
+documentation for the post-M7 command layout. The implementation audit found
+that `Thread_pool` was installed by Dune but was not documented as public API;
+release notes now mention its removal.
 
 ## Scope
 
@@ -78,25 +86,21 @@ semantics, and the public FUSE callback API should remain unchanged.
 
 ### Remove `Thread_pool`
 
-Decision: remove `lib/Thread_pool.ml` and `lib/Thread_pool.mli` in M8, unless
-the implementation audit finds that they are part of the documented public API.
+Decision: remove `lib/Thread_pool.ml` and `lib/Thread_pool.mli` in M8.
 
 Rationale: M6 concluded that libfuse owns worker-thread dispatch for the
 supported multithreaded runtime. The module is not used by the FUSE 3 lifecycle,
 and keeping it invites confusion about how multithreaded FUSE callbacks are
 processed.
 
-Risk: if external users depended on an undocumented compiled module directly,
-removal could be observable. The implementation should confirm whether the
-module is exposed by the installed public library before deleting it, and the
-release notes should mention the removal if it is externally visible.
-
-## Open Decisions
+Risk: the module was installed by Dune, so removal could be observable if
+external users depended on an undocumented compiled module directly. Release
+notes mention the removal.
 
 ### Cleanup Depth
 
-Recommendation: keep M8 to dead code, stale comments, metadata, and
-documentation consistency.
+Decision: keep M8 to dead code, stale comments, metadata, and documentation
+consistency.
 
 Rationale: callback behavior and C conversion helpers are already covered by the
 mounted e2e tests. Changing them during a cleanup pass would increase review
@@ -107,7 +111,7 @@ risk without improving the migration surface.
 1. Check current references:
 
    ```sh
-   rg -n "Thread_pool|make test|multithreaded support is not implemented|FUSE_USE_VERSION 26|fuse_read_cmd|fuse_process_cmd|fuse_setup|fuse_teardown" \
+   rg -n "Thread_pool|make test|FUSE_USE_VERSION 26|fuse_read_cmd|fuse_process_cmd|fuse_setup|fuse_teardown" \
      lib test docs README.md AGENTS.md Makefile dune-project *.opam.template
    ```
 
@@ -152,8 +156,7 @@ risk without improving the migration surface.
 - Mounted smoke tests remain available through `make e2e-smoke-test`.
 - OCaml package metadata requires OCaml `>= 4.08.0`.
 - Active docs no longer describe M7 multithreaded support as future work.
-- `Thread_pool` is removed, unless the implementation audit finds a documented
-  public API blocker.
+- `Thread_pool` is removed.
 - No generated camlidl files are committed.
 - No public callback API changes are made.
 

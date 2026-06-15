@@ -452,22 +452,10 @@ static enum fuse_fill_dir_flags ml2c_fill_dir_flags(value vflags) {
   FOR_ALL_NON_INIT_OPS(MACRO)
 
 /*
-   TODO: missing callbacks for fuse API version 2.7
-
-   CALLS INTRODUCED FROM 2.3 ON
-
-   unsigned int 	flag_nullpath_ok: 1
-   void(* 	destroy )(void *)
-   int(* 	access )(const char *, int)
-   int(* 	create )(const char *, mode_t, struct fuse_file_info *)
-   int(* 	ftruncate )(const char *, off_t, struct fuse_file_info *)
-   int(* 	fgetattr )(const char *, struct stat *, struct fuse_file_info *)
-   int(* 	lock )(const char *, struct fuse_file_info *, int cmd, struct
-   flock *) int(* 	utimens )(const char *, const struct timespec tv[2])
-   int(* 	bmap )(const char *, size_t blocksize, uint64_t *idx)
-   int(* 	ioctl )(const char *, int cmd, void *arg, struct fuse_file_info
-   *, unsigned int flags, void *data) int(* 	poll )(const char *, struct
-   fuse_file_info *, struct fuse_pollhandle *ph, unsigned *reventsp)
+   The binding intentionally exposes only the callbacks represented in
+   Fuse.operations. Other libfuse 3 high-level callbacks, such as destroy,
+   access, create, lock, bmap, ioctl, poll, fallocate, copy_file_range, lseek,
+   and statx, are left unset.
 */
 
 #define SET_NULL_OP(OPNAME) .OPNAME = NULL,
