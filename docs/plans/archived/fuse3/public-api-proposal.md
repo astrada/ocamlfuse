@@ -30,7 +30,6 @@ type file_info = {
   fi_nonseekable : bool;
   fi_flock_release : bool;
   fi_cache_readdir : bool;
-  fi_noflush : bool;
   fi_lock_owner : int64;
   fi_poll_events : int32;
 }
@@ -49,7 +48,6 @@ type file_info_update = {
   fi_update_keep_cache : bool;
   fi_update_nonseekable : bool;
   fi_update_cache_readdir : bool;
-  fi_update_noflush : bool;
 }
 
 val default_file_info_update : file_info_update
@@ -59,8 +57,8 @@ val default_file_info_update : file_info_update
 applies only fields that are meaningful for the callback:
 
 - `fi_update_fh` maps to `fi->fh` when present.
-- `fi_update_direct_io`, `fi_update_keep_cache`, `fi_update_nonseekable`, and
-  `fi_update_noflush` are meaningful for `fopen`.
+- `fi_update_direct_io`, `fi_update_keep_cache`, and `fi_update_nonseekable`
+   are meaningful for `fopen`.
 - `fi_update_cache_readdir` is meaningful for `opendir`.
 
 `Fuse.Fuse_compat` should convert the old `int option` file handle API to and

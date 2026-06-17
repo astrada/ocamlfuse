@@ -330,9 +330,8 @@ static value c2ml_file_info(const struct fuse_file_info *fi) {
   Store_field(vres, 7, Val_bool(fi->nonseekable));
   Store_field(vres, 8, Val_bool(fi->flock_release));
   Store_field(vres, 9, Val_bool(fi->cache_readdir));
-  Store_field(vres, 10, Val_bool(fi->noflush));
-  Store_field(vres, 11, caml_copy_int64((int64_t)fi->lock_owner));
-  Store_field(vres, 12, caml_copy_int32((int32_t)fi->poll_events));
+  Store_field(vres, 10, caml_copy_int64((int64_t)fi->lock_owner));
+  Store_field(vres, 11, caml_copy_int32((int32_t)fi->poll_events));
   CAMLreturn(vres);
 }
 
@@ -365,7 +364,6 @@ static void ml2c_file_info_update(struct fuse_file_info *fi, value vupdate,
     fi->direct_io = Bool_val(Field(vupdate, 1));
     fi->keep_cache = Bool_val(Field(vupdate, 2));
     fi->nonseekable = Bool_val(Field(vupdate, 3));
-    fi->noflush = Bool_val(Field(vupdate, 5));
   }
 
   CAMLreturn0;

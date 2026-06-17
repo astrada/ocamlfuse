@@ -51,7 +51,6 @@ type file_info = {
   fi_nonseekable : bool;
   fi_flock_release : bool;
   fi_cache_readdir : bool;
-  fi_noflush : bool;
   fi_lock_owner : int64;
   fi_poll_events : int32;
 }
@@ -62,7 +61,6 @@ type file_info_update = {
   fi_update_keep_cache : bool;
   fi_update_nonseekable : bool;
   fi_update_cache_readdir : bool;
-  fi_update_noflush : bool;
 }
 
 let default_file_info_update =
@@ -72,7 +70,6 @@ let default_file_info_update =
     fi_update_keep_cache = false;
     fi_update_nonseekable = false;
     fi_update_cache_readdir = false;
-    fi_update_noflush = false;
   }
 
 type rename_flags = {
