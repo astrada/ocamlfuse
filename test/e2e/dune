@@ -1,0 +1,14 @@
+(executable
+ (name testfs)
+ (libraries fuse3 unix threads bigarray))
+
+(executable
+ (name client)
+ (libraries fuse3 unix threads ounit2)
+ (foreign_stubs
+  (language c)
+  (names xattr_stubs)))
+
+(executable
+ (name compat_compile)
+ (libraries fuse3 unix))

@@ -23,13 +23,13 @@
   applejack@users.sf.net
   vincenzo_ml@yahoo.it
 */
-quote(h,"#define FUSE_USE_VERSION 26")
+quote(h,"#define FUSE_USE_VERSION 30")
 quote(h,"#include <fuse.h>")
+quote(h,"#include <fuse_lowlevel.h>")
 
 
 typedef [abstract] void * fuse;
 quote(mlmli,"type fuse_operations")
-quote(mlmli,"type fuse_cmd")
 
 typedef [string] char * str;
 
@@ -51,7 +51,7 @@ struct fuse_operation_names {
   [string,unique] char * chmod;
   [string,unique] char * chown;
   [string,unique] char * truncate;
-  [string,unique] char * utime;
+  [string,unique] char * utimens;
   [string,unique,mlname(fopen)] char * open;
   [string,unique] char * read;
   [string,unique] char * write;
@@ -80,10 +80,5 @@ quote(h,"#define __file_info file_info");
 [ptr] struct fuse_operations * get_fuse_operations();
 void set_fuse_operations([ref] const struct fuse_operation_names * op);
 
-[blocking,ptr] struct fuse_cmd * fuse_read_cmd([ptr,in] struct fuse *f);
-[blocking] void fuse_process_cmd([ptr] struct fuse *f,[ptr,in] struct fuse_cmd *cmd);
-
 void ml_fuse_init();
-void ml_fuse_main(int argc,[size_is(argc)] str argv[],[ptr] const struct fuse_operations *op);
-
-[blocking] boolean fuse_exited([ptr] struct fuse * f);
+int ml_fuse_main(int argc,[size_is(argc)] str argv[],[ptr] const struct fuse_operations *op,int loop_mode);

@@ -1,180 +1,156 @@
-ocamlfuse
-=========
+# fuse3
 
-This repository is cloned from the last CVS snapshot of
-[OCamlFuse](https://sourceforge.net/projects/ocamlfuse/), with:
-* Patches (see [#1](https://github.com/astrada/ocamlfuse/pull/1) and [#3](https://github.com/astrada/ocamlfuse/pull/3)) to make it compile on Mac OS X.
-* Fix for a race condition in multi-threaded mode (see [#4](https://github.com/astrada/ocamlfuse/issue/4)).
-* [dune](https://github.com/ocaml/dune) support (see [#12](https://github.com/astrada/ocamlfuse/pull/12)).
-* See all the merged [PRs](https://github.com/astrada/ocamlfuse/pulls?q=is%3Apr+is%3Aclosed)
+`fuse3` provides OCaml bindings for libfuse 3. It lets OCaml programs
+implement high-level FUSE filesystems while using Bigarray-backed buffers for
+read and write callbacks.
 
-### Breaking Changes
+The public Dune and opam package is `fuse3`. The OCaml module remains
+`Fuse`.
 
-* Since v2.7.2, if compiled with OCaml version 5 or later, the FUSE process is
-  started always in foreground mode (the `-f` option is always injected). In
-  fact, the new Multicore runtime prohibits calling a `fork()` from C after
-  `caml_main()` is called. So, we can't let FUSE call `fuse_daemonize()`
-  before `caml_main()`. To avoid flawed heuristics to decide when to call
-  `fuse_daemonize()`, and usability problems (option parsing goes after
-  `fork`, so we loose diagnostics, if the options are wrong), the simplest
-  solution is to always keep the process in foreground. If you need to run the
-  process in background, remember to append `&` to the command line or run the
-  process in a `systemd` service.
+## Requirements
 
-The original README starts here:
+- Linux
+- libfuse `>= 3.10.0`
+- `pkg-config`
+- OCaml `>= 4.08.0`
+- camlidl
+- Dune `>= 3.7`
 
-INTRODUCTION
+On Debian and Ubuntu, install the FUSE development package with:
 
-This is a binding to `fuse` for the OCaml programming language, enabling
-you to write multithreaded filesystems with the OCaml language. It has
-been designed with simplicity as a goal, as you can see by looking at
-`example/fusexmp.ml`. Efficiency has also been a separate goal. The
-`Bigarray` library is used for read and writes, allowing the library to
-do zero-copy in OCaml land.
+```sh
+sudo apt install libfuse3-dev
+```
 
-REQUIREMENTS
+## Installation
 
-You need `fuse` (version 2.7 or greater)
+The recommended installation path is opam:
 
-https://www.sourceforge.net/projects/fuse
+```sh
+opam install fuse3
+```
 
-You also need `OCaml >= 4.02.3` and `camlidl >= 1.05`.
+For local development:
 
-GETTING STARTED
+```sh
+make
+make install
+```
 
-The recommended way to install this library is with
-[opam](https://opam.ocaml.org/).
+To uninstall a local installation:
 
-    opam install ocamlfuse
+```sh
+make uninstall
+```
 
+## Building And Testing
 
-INSTALLATION
+Build the library and install metadata:
 
-If you don't want to install `opam`, you need to manually install this
-prerequisites:
+```sh
+make
+```
 
-1) Prerequisites
+Build the examples:
 
-- Fuse
+```sh
+make example
+```
 
-  Should be in the major linux distributions, but you can find it at
+Run the unit and compile checks:
 
-  https://fuse.sourceforge.net
+```sh
+make test
+```
 
-  You need to install `libfuse-dev` in debian and ubuntu.
+Run the mounted smoke test:
 
-- OCaml >= 4.02.3
+```sh
+make e2e-smoke-test
+```
 
-  Should be in the major linux distributions, but is also available at
+Run the full mounted end-to-end suite:
 
-  https://ocaml.org
+```sh
+make e2e
+```
 
-- CamlIDL >= 1.05
+Run the full mounted end-to-end suite in explicit single-threaded mode:
 
-  present at least in ubuntu, also available at
+```sh
+make e2e-single-threaded
+```
 
-  https://github.com/xavierleroy/camlidl
+Run the full mounted end-to-end suite in explicit multithreaded mode:
 
-- dune >= 3.7
+```sh
+make e2e-multithreaded
+```
 
-  available at
+The mounted tests require Linux, `/dev/fuse` access, and permission to mount
+FUSE filesystems. When FUSE access is unavailable, mounted e2e targets print
+`SKIP` and exit successfully. Set `OCAMLFUSE_E2E_REQUIRE_FUSE=1` to make
+missing FUSE support a failure.
 
-  https://dune.build/
+## Examples
 
-2) Installing OCamlFuse
+The examples are in `example/`:
 
-  unpack the tarball, then
+- `hello.ml`: a minimal read-only filesystem.
+- `fusexmp.ml`: a passthrough-style filesystem.
 
-    make
-    make install
+After `make example`, the executables are under `_build/default/example/`.
 
-  This will install ocamlfuse in your ocaml library directory. To uninstall
-  it you can run `make uninstall`.
+Example:
 
-TESTING
+```sh
+mkdir -p /tmp/fuse3-mnt
+_build/default/example/hello.exe /tmp/fuse3-mnt -f -s
+```
 
-    make example
-    cd _build/default/example
-    mkdir tmp
-    ./fusexmp.exe tmp
-    cd tmp #you'll find a copy of your "/" directory here
+Unmount the filesystem from another shell when finished:
 
-NOTE: if you access the "clone" of the mountpoint of the filesystem, the fs will hang (kill it and then use fusermount -u to umount it). This is a known bug/limitation.
+```sh
+fusermount3 -u /tmp/fuse3-mnt
+```
 
-BEFORE YOU WRITE YOUR OWN FILESYSTEM
+Some systems still provide the unmount command as `fusermount`.
 
-KNOWN PROBLEMS (if you can help, please do)
+## API Notes
 
-- The stateful interface for readdir is not implemented
+New code should use the native `Fuse` API. The native operation record exposes
+FUSE 3 concepts such as:
 
-- There is a stub in `Fuse_util.c` regarding `st_blocks` - if one
-  implements statfs with a block size different
-  than 512 "du" will not work on the filesystem.
+- `file_info` values on callbacks that receive FUSE file information;
+- `file_info_update` results from `fopen` and `opendir`;
+- `int64` file handles;
+- rename flags;
+- readdir flags and `dir_entry` values;
+- nanosecond `utimens` timestamps, including `Now` and `Omit` sentinels.
 
-- many ocaml exceptions are reported as 127
+`Fuse.Fuse_compat` provides the old operation record shape as an upgrade aid.
+It runs on top of the FUSE 3 implementation, but it cannot represent every FUSE
+3 feature. In particular, compatibility callbacks ignore new file-info
+parameters, reject unsupported rename flags with `EINVAL`, reject timestamp
+sentinels that old `utime` callbacks cannot represent, and convert file handles
+back to `int` with overflow checks.
 
-- we should add non-blocking `lstat64` and `statfs`, `*xattr` implementations
-  for ocaml in `Unix_util`
+The default FUSE loop uses libfuse's multithreaded loop. In that mode, libfuse
+owns worker threads and the binding registers those threads with the OCaml
+runtime before invoking OCaml callbacks. Users who need single-threaded
+execution can pass `~loop_mode:Single_threaded`; FUSE `-s` also forces the
+single-threaded path.
 
-- translation between ocaml unix errors and C unix error is dependent
-  on the order of constructor names in ocaml. There should be a way to
-  get error names from caml and create a translation table.
+## Documentation
 
-- the `Unix_util` library uses unsafe coercions between unix file
-  handles (which are defined as ints) and ints. Even if this works, in
-  the future it might stop working.
+- `docs/bindings.md`: binding architecture and maintenance notes.
+- `docs/release-notes.md`: release notes for the FUSE 3 package.
+- `docs/plans/archived/fuse3/`: completed FUSE 3 migration planning history.
 
-- IMPORTANT: `Unix_util.read` and `write` operations have not been tested
-  in case of errors. Error code conversion might be incorrect but I
-  don't have test cases (maybe the easy way is to modify fusexmp to
-  return various errors).
+## History
 
-- Unix errors which are unknown to ocaml should be reported as EUNKNOWNERR
+This repository descends from the original OCamlFuse project hosted on
+SourceForge. It keeps the original GPL-licensed binding lineage while updating
+the build, package metadata, tests, and runtime integration for libfuse 3.
 
-- Test statfs (never used until now)
-
-- Some errors are missing in the unix module (e.g. ENOTSUP,ENOATTR,
-  see man lsxattr). We could solve all these problems with errors using
-  a custom error type instead of `unix_error` but this would create
-  troubles.
-
-- deadlock (and consequent necessity to kill -KILL the program) if
-  accessing the mountpoint mirrored inside the mountpoint in
-  fusexmp. I remember it was easy to understand why, but right now I
-  have no idea.
-
-HELPING THE PROJECT
-
-The best help you can give to the project is to test everything,
-including, but not limited to:
-
-- large file operations (files >= 4gb)
-
-- multithreaded operations: the filesystem should always be responsive,
-  no matter if reading a certain file blocks
-
-- robustness: the filesystem should NEVER exit from its mainloop if not
-  explicitly requested from the user.
-
-Please report if you do serious tests! We need to know which programs
-did you use, if you found any bug, and how to reproduce the tests.
-
-Also, we need packaging, I don't have the necessary time and don't know
-ocamlfindlib or GODI. Please if you have the time and the necessary
-knowledge help with packaging. Autoconf support would be highly appreciated,
-too.
-
- A mailing list has been set up on sourceforge, you are strongly
-encouraged to post feedback there and in general to subscribe if you use ocamlfuse.
-
-The sourceforge page for ocamlfuse is
-
-https://sourceforge.net/projects/ocamlfuse
-
-Bye and have fun
-
-Vincenzo Ciancia
-
-vincenzo_ml at yahoo dot it
-ciancia at di dot unipi dot it
-applejack at users dot sourceforge dot net
+Original project page: <https://sourceforge.net/projects/ocamlfuse/>

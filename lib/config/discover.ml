@@ -18,23 +18,24 @@ let read_file path =
     raise exc
 
 let () =
-  C.main ~name:"foo" (fun c ->
-      let default : C.Pkg_config.package_conf =
-        { libs = [ "-lfuse" ]; cflags = [] }
-      in
+  C.main ~name:"fuse3" (fun c ->
       let conf =
         match C.Pkg_config.get c with
+        | None -> C.die "pkg-config is required to find libfuse3"
         | Some pkgc -> (
-            match C.Pkg_config.query pkgc ~package:"fuse" with
-            | Some flags -> flags
-            | None -> default)
-        | None -> default
+            match
+              C.Pkg_config.query_expr_err pkgc ~package:"fuse3"
+                ~expr:"fuse3 >= 3.10.0"
+            with
+            | Ok flags -> flags
+            | Error msg ->
+                C.die "could not find libfuse3 >= 3.10.0 with pkg-config: %s"
+                  msg)
       in
       let calmidl_fname = "camlidl.libs.sexp" in
       let camlidl_lib_path =
         match
-          Sys.command
-            (Printf.sprintf "opam var camlidl:lib > %s" calmidl_fname)
+          Sys.command (Printf.sprintf "opam var camlidl:lib > %s" calmidl_fname)
         with
         | 0 -> String.trim (read_file calmidl_fname)
         | _ -> (
@@ -48,5 +49,5 @@ let () =
       let camlidl_libs = [ "-L" ^ camlidl_lib_path; "-lcamlidl" ] in
       C.Flags.(
         write_sexp calmidl_fname camlidl_libs;
-        write_sexp "fuse.cflags.sexp" conf.cflags;
-        write_sexp "fuse.libs.sexp" conf.libs))
+        write_sexp "fuse3.cflags.sexp" conf.cflags;
+        write_sexp "fuse3.libs.sexp" conf.libs))

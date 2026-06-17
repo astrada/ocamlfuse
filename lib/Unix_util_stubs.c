@@ -152,7 +152,7 @@ CAMLprim value copy_statvfs(struct statvfs *buf) {
   caml_modify(&Field(bufv, 8), v);
   v = caml_copy_int64(buf->f_flag);
   caml_modify(&Field(bufv, 9), v);
-  caml_copy_int64(buf->f_namemax);
+  v = caml_copy_int64(buf->f_namemax);
   caml_modify(&Field(bufv, 10), v);
   CAMLreturn(bufv);
 }
@@ -161,7 +161,6 @@ CAMLprim value unix_util_statvfs(value pathv) {
   CAMLparam1(pathv);
   CAMLlocal2(vres, bufv);
   vres = caml_alloc(1, 1); /* Ok result */
-  bufv;
   const char *path = String_val(pathv);
   struct statvfs buf;
   int res;

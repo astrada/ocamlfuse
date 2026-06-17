@@ -29,20 +29,51 @@ open Fuse
 
 (* Read and write operations a la fuse *)
 
-let store_descr fd = Unix_util.int_of_file_descr fd
+let store_descr fd = Int64.of_int (Unix_util.int_of_file_descr fd)
 
 (* this can be an hashtable in more complicated cases *)
-let retrieve_descr i = Unix_util.file_descr_of_int i
+let retrieve_descr h =
+  if h < Int64.of_int min_int || h > Int64.of_int max_int then
+    raise (Unix.Unix_error (EOVERFLOW, "file handle", ""))
+  else Unix_util.file_descr_of_int (Int64.to_int h)
 
-let xmp_read _path buf offset d =
-  let hnd = retrieve_descr d in
+let file_info_update_of_descr fd =
+  { default_file_info_update with fi_update_fh = Some (store_descr fd) }
+
+let xmp_read _path buf offset fi =
+  let hnd = retrieve_descr fi.fi_fh in
   ignore (LargeFile.lseek hnd offset SEEK_SET);
   Unix_util.read hnd buf
 
-let xmp_write _path buf offset d =
-  let hnd = retrieve_descr d in
+let xmp_write _path buf offset fi =
+  let hnd = retrieve_descr fi.fi_fh in
   ignore (LargeFile.lseek hnd offset SEEK_SET);
   Unix_util.write hnd buf
+
+let timestamp_to_float current = function
+  | Time { tv_sec; tv_nsec } ->
+      Int64.to_float tv_sec +. (float tv_nsec /. 1_000_000_000.0)
+  | Now -> Unix.gettimeofday ()
+  | Omit -> current
+
+let default_entry_flags = { fill_dir_plus = false }
+
+let dir_entry entry_name =
+  {
+    entry_name;
+    entry_stats = None;
+    entry_offset = None;
+    entry_flags = default_entry_flags;
+  }
+
+let rename old_path new_path flags =
+  match flags.rename_flags_raw with
+  | 0 -> Unix.rename old_path new_path
+  | 1 when flags.rename_noreplace ->
+      if Sys.file_exists new_path then
+        raise (Unix.Unix_error (EEXIST, "rename", new_path))
+      else Unix.rename old_path new_path
+  | _ -> raise (Unix.Unix_error (EINVAL, "rename", old_path))
 
 (* Extended attributes helpers *)
 
@@ -73,19 +104,28 @@ let _ =
     {
       init = (fun () -> Printf.printf "filesystem started\n%!");
       statfs = Unix_util.statvfs;
-      getattr = Unix.LargeFile.lstat;
+      getattr = (fun path _fi -> Unix.LargeFile.lstat path);
       readdir =
-        (fun path _hnd -> "." :: ".." :: Array.to_list (Sys.readdir path));
+        (fun path _offset _fi _flags ->
+          List.map dir_entry ("." :: ".." :: Array.to_list (Sys.readdir path)));
       opendir =
-        (fun path flags ->
-          Unix.close (Unix.openfile path flags 0);
-          None);
-      releasedir = (fun _path _mode _hnd -> ());
-      fsyncdir = (fun _path _ds _hnd -> Printf.printf "sync dir\n%!");
+        (fun path fi ->
+          file_info_update_of_descr (Unix.openfile path fi.fi_flags 0));
+      releasedir = (fun _path fi -> Unix.close (retrieve_descr fi.fi_fh));
+      fsyncdir =
+        (fun _path _ds fi ->
+          Unix.fsync (retrieve_descr fi.fi_fh);
+          Printf.printf "sync dir\n%!");
       readlink = Unix.readlink;
-      utime = Unix.utimes;
+      utimens =
+        (fun path atime mtime _fi ->
+          let stats = Unix.LargeFile.lstat path in
+          Unix.utimes path
+            (timestamp_to_float stats.st_atime atime)
+            (timestamp_to_float stats.st_mtime mtime));
       fopen =
-        (fun path flags -> Some (store_descr (Unix.openfile path flags 0)));
+        (fun path fi ->
+          file_info_update_of_descr (Unix.openfile path fi.fi_flags 0));
       read = xmp_read;
       write = xmp_write;
       mknod = (fun path mode -> close (openfile path [ O_CREAT; O_EXCL ] mode));
@@ -93,14 +133,17 @@ let _ =
       unlink = Unix.unlink;
       rmdir = Unix.rmdir;
       symlink = Unix.symlink;
-      rename = Unix.rename;
+      rename;
       link = Unix.link;
-      chmod = Unix.chmod;
-      chown = Unix.chown;
-      truncate = Unix.LargeFile.truncate;
-      release = (fun _path _mode hnd -> Unix.close (retrieve_descr hnd));
-      flush = (fun _path _hnd -> ());
-      fsync = (fun _path _ds _hnd -> Printf.printf "sync\n%!");
+      chmod = (fun path mode _fi -> Unix.chmod path mode);
+      chown = (fun path uid gid _fi -> Unix.chown path uid gid);
+      truncate = (fun path size _fi -> Unix.LargeFile.truncate path size);
+      release = (fun _path fi -> Unix.close (retrieve_descr fi.fi_fh));
+      flush = (fun _path _fi -> ());
+      fsync =
+        (fun _path _ds fi ->
+          Unix.fsync (retrieve_descr fi.fi_fh);
+          Printf.printf "sync\n%!");
       listxattr =
         (fun path ->
           init_attr xattr path;

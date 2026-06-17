@@ -1,0 +1,3 @@
+(test
+ (name loop_mode_compile)
+ (libraries fuse3 unix))
