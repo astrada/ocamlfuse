@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased FUSE 3 Migration
+## 3.10.0
 
 This release moves the binding to libfuse 3 and renames the public package.
 
@@ -8,7 +8,7 @@ This release moves the binding to libfuse 3 and renames the public package.
 
 - The opam and public Dune package is now `fuse3`.
 - The conf package is now `conf-libfuse3`.
-- The build requires libfuse 3 with minimum version `3.10`.
+- The build requires libfuse 3 with minimum version `3.10.0`.
 - The build requires OCaml `>= 4.08.0`.
 - The first supported platform target is Linux.
 - Build discovery uses `pkg-config fuse3` and does not fall back to another

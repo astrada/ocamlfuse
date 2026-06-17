@@ -73,7 +73,7 @@ equivalent.
 - `lib/dune`: Dune rules that invoke camlidl and discover libfuse/camlidl link
   flags.
 - `lib/config/discover.ml`: Dune configurator script. It queries `pkg-config`
-  for `fuse3 >= 3.10` and uses `opam var camlidl:lib` or
+  for `fuse3 >= 3.10.0` and uses `opam var camlidl:lib` or
   `ocamlfind query camlidl` for camlidl runtime linking.
 - `lib/Fuse.ml` and `lib/Fuse.mli`: public OCaml API.
 - `lib/Fuse_lib.ml`: callback registration helpers.
@@ -95,7 +95,7 @@ equivalent.
   requires `clang-format` in `PATH`.
 - `docs/`: agent-oriented project documentation. Start with
   `docs/README.md`.
-- `docs/release-notes.md`: unreleased release notes for the FUSE 3 package.
+- `docs/release-notes.md`: release notes for the FUSE 3 package.
 
 ## Binding Workflow
 

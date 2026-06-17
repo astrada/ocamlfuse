@@ -1,6 +1,7 @@
 # FUSE 3 Migration Plan
 
-This directory tracks the planned migration from libfuse 2 to libfuse 3.
+This archived directory preserves the completed migration plan from libfuse 2
+to libfuse 3.
 
 - `requirements.md`: migration goals, constraints, requirements, and decisions.
 - `m0-checks.md`: completed M0 decision and environment checkpoint.

@@ -25,11 +25,12 @@ let () =
         | Some pkgc -> (
             match
               C.Pkg_config.query_expr_err pkgc ~package:"fuse3"
-                ~expr:"fuse3 >= 3.10"
+                ~expr:"fuse3 >= 3.10.0"
             with
             | Ok flags -> flags
             | Error msg ->
-                C.die "could not find libfuse3 >= 3.10 with pkg-config: %s" msg)
+                C.die "could not find libfuse3 >= 3.10.0 with pkg-config: %s"
+                  msg)
       in
       let calmidl_fname = "camlidl.libs.sexp" in
       let camlidl_lib_path =

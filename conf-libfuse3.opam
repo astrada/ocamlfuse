@@ -14,7 +14,7 @@ depends: [
   "odoc" {with-doc}
 ]
 dev-repo: "git+https://github.com/astrada/ocamlfuse.git"
-build: ["pkg-config" "--atleast-version=3.10" "fuse3"]
+build: ["pkg-config" "--atleast-version=3.10.0" "fuse3"]
 depexts: [
   ["libfuse3-dev"] {os-family = "debian" | os-distribution = "ubuntu"}
   ["fuse3-dev"] {os-distribution = "alpine"}

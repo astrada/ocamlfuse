@@ -10,7 +10,7 @@ The public Dune and opam package is `fuse3`. The OCaml module remains
 ## Requirements
 
 - Linux
-- libfuse `>= 3.10`
+- libfuse `>= 3.10.0`
 - `pkg-config`
 - OCaml `>= 4.08.0`
 - camlidl
@@ -144,8 +144,8 @@ single-threaded path.
 ## Documentation
 
 - `docs/bindings.md`: binding architecture and maintenance notes.
-- `docs/release-notes.md`: unreleased FUSE 3 migration notes.
-- `docs/plans/fuse3/`: migration planning and milestone history.
+- `docs/release-notes.md`: release notes for the FUSE 3 package.
+- `docs/plans/archived/fuse3/`: completed FUSE 3 migration planning history.
 
 ## History
 

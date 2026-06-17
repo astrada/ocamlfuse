@@ -42,6 +42,6 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/astrada/ocamlfuse.git"
-homepage: "http://sourceforge.net/apps/mediawiki/ocamlfuse"
+homepage: "https://github.com/astrada/ocamlfuse"
 available: [ os = "linux" ]
 x-maintenance-intent: ["(latest)"]

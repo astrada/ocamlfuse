@@ -4,7 +4,7 @@
 split between camlidl-generated code and hand-written OCaml and C glue.
 
 The binding targets `FUSE_USE_VERSION 30` to stay compatible with libfuse
-`3.10`, which is the minimum supported version for the first FUSE 3 release.
+`3.10.0`, which is the minimum supported version for the first FUSE 3 release.
 
 ## Build-Time Generation
 
@@ -22,7 +22,7 @@ Do not edit generated copies directly.
 `lib/dune`:
 
 - `fuse3.cflags.sexp` and `fuse3.libs.sexp` come from
-  `pkg-config fuse3 >= 3.10`.
+  `pkg-config fuse3 >= 3.10.0`.
 - `camlidl.libs.sexp` comes from `opam var camlidl:lib` or
   `ocamlfind query camlidl`.
 
