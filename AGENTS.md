@@ -96,6 +96,8 @@ equivalent.
 - `docs/`: agent-oriented project documentation. Start with
   `docs/README.md`.
 - `docs/release-notes.md`: release notes for the FUSE 3 package.
+- `docs/tsan-testing.md`: ThreadSanitizer setup, suppressions, and e2e
+  validation notes.
 
 ## Binding Workflow
 
