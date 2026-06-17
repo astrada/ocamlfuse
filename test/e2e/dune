@@ -1,9 +1,11 @@
 (executable
  (name testfs)
+ (modules testfs)
  (libraries fuse3 unix threads bigarray))
 
 (executable
  (name client)
+ (modules client)
  (libraries fuse3 unix threads ounit2)
  (foreign_stubs
   (language c)
@@ -11,4 +13,5 @@
 
 (executable
  (name compat_compile)
+ (modules compat_compile)
  (libraries fuse3 unix))
