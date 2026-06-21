@@ -1,4 +1,5 @@
 (lang dune 3.7)
+(name fuse3)
 
 (generate_opam_files true)
 
