@@ -1,5 +1,9 @@
 # Release Notes
 
+## Unreleased
+
+- `Fuse.invalidate_path` drops the kernel's cached entry for a path.
+
 ## 3.10.0
 
 This release moves the binding to libfuse 3 and renames the public package.

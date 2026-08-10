@@ -196,6 +196,14 @@ let default_operations =
 
 let int_of_loop_mode = function Single_threaded -> 0 | Multi_threaded -> 1
 
+external ml_fuse_invalidate_path : string -> int = "ml_fuse_invalidate_path"
+
+let invalidate_path path =
+  match ml_fuse_invalidate_path path with
+  | 0 -> ()
+  | err ->
+      raise (Unix.Unix_error (Unix.EUNKNOWNERR (-err), "invalidate_path", path))
+
 let main ?(loop_mode = Multi_threaded) argv ops =
   Fuse_bindings.ml_fuse_init ();
   Fuse_bindings.set_fuse_operations (op_names_of_operations ops);
