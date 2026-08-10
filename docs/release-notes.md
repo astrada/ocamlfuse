@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- An operation raising anything other than `Unix.Unix_error` now answers EIO
+  instead of ERANGE, and the exception is kept in a ring readable through
+  `Fuse.recent_errors` and counted by `Fuse.error_count`.
 - Values allocated for a callback argument are bound before the call, so a
   collection during argument construction can no longer hand an operation a
   stale path or buffer.

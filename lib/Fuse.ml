@@ -196,6 +196,17 @@ let default_operations =
 
 let int_of_loop_mode = function Single_threaded -> 0 | Multi_threaded -> 1
 
+type recorded_error = {
+  ticket : int;
+  time : int;
+  op : string;
+  path : string;
+  exn : exn;
+}
+
+external recent_errors : unit -> recorded_error array = "ml_fuse_recent_errors"
+external error_count : unit -> int = "ml_fuse_error_count"
+
 let main ?(loop_mode = Multi_threaded) argv ops =
   Fuse_bindings.ml_fuse_init ();
   Fuse_bindings.set_fuse_operations (op_names_of_operations ops);

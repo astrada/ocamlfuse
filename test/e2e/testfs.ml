@@ -13,6 +13,13 @@ let mt_release_fifo = Sys.getenv_opt "OCAMLFUSE_E2E_MT_RELEASE_FIFO"
 let raise_unix err fn path = raise (Unix_error (err, fn, path))
 let mt_blocking_read_path = "/__ocamlfuse_e2e_blocking_read"
 let mt_blocking_read_payload = "multithreaded read released\n"
+let raising_read_path = "/__ocamlfuse_e2e_raising_read"
+
+exception E2e_raised of string
+
+(* Reads back what the binding recorded, so the client sees it without the two
+   processes sharing anything but the mount. *)
+let recorded_errors_path = "/__ocamlfuse_e2e_recorded_errors"
 
 type e2e_loop_mode = Default | Explicit of Fuse.loop_mode
 
@@ -164,16 +171,33 @@ let rename_noreplace old_path new_path =
   else Unix.rename (real_path old_path) (real_path new_path)
 
 let is_mt_blocking_read path = path = mt_blocking_read_path
+let is_raising_read path = path = raising_read_path
+let is_recorded_errors path = path = recorded_errors_path
+let is_synthetic path = is_raising_read path || is_recorded_errors path
 
-let blocking_read_stats () =
+let recorded_errors_payload () =
+  let buffer = Buffer.create 256 in
+  Buffer.add_string buffer (Printf.sprintf "count %d\n" (Fuse.error_count ()));
+  Array.iter
+    (fun e ->
+      Buffer.add_string buffer
+        (Printf.sprintf "%d %s %s %s\n" e.Fuse.ticket e.Fuse.op e.Fuse.path
+           (Printexc.to_string e.Fuse.exn)))
+    (Fuse.recent_errors ());
+  Buffer.contents buffer
+
+let synthetic_stats size =
   let stats = Unix.LargeFile.lstat backing_root in
   {
     stats with
     Unix.LargeFile.st_kind = S_REG;
     st_perm = 0o444;
     st_nlink = 1;
-    st_size = Int64.of_int (String.length mt_blocking_read_payload);
+    st_size = Int64.of_int size;
   }
+
+let blocking_read_stats () =
+  synthetic_stats (String.length mt_blocking_read_payload)
 
 let blocking_read path buf offset =
   let marker, fifo = control_paths "read" path in
@@ -196,6 +220,9 @@ let test_operations =
       (fun path _fi ->
         log "getattr";
         if is_mt_blocking_read path then blocking_read_stats ()
+        else if is_raising_read path then synthetic_stats 1
+        else if is_recorded_errors path then
+          synthetic_stats (String.length (recorded_errors_payload ()))
         else Unix.LargeFile.lstat (real_path path));
     readlink =
       (fun path ->
@@ -261,6 +288,11 @@ let test_operations =
       (fun path fi ->
         log "fopen";
         if is_mt_blocking_read path then default_file_info_update
+          (* Both need the page cache out of the way: it reports every failure
+             as EIO whatever the filesystem answered, and clamps a read to a
+             size cached before the last failure was recorded. *)
+        else if is_synthetic path then
+          { default_file_info_update with fi_update_direct_io = true }
         else
           let fd =
             Unix.openfile (real_path path) (flags_or_readonly fi.fi_flags) 0o666
@@ -270,6 +302,9 @@ let test_operations =
       (fun path buf offset fi ->
         log "read";
         if is_mt_blocking_read path then blocking_read path buf offset
+        else if is_raising_read path then raise (E2e_raised "read")
+        else if is_recorded_errors path then
+          read_payload (recorded_errors_payload ()) buf offset
         else
           let file_descr = retrieve_descr fi.fi_fh in
           ignore (Unix.LargeFile.lseek file_descr offset SEEK_SET);
@@ -291,7 +326,7 @@ let test_operations =
     release =
       (fun path fi ->
         log "release";
-        if is_mt_blocking_read path then ()
+        if is_mt_blocking_read path || is_synthetic path then ()
         else Unix.close (retrieve_descr fi.fi_fh));
     fsync =
       (fun _path _isdatasync fi ->

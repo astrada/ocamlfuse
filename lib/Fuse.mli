@@ -122,6 +122,32 @@ val op_names_of_operations : operations -> Fuse_bindings.fuse_operation_names
 val default_operations : operations
 val main : ?loop_mode:loop_mode -> Fuse_bindings.str array -> operations -> unit
 
+type recorded_error = {
+  ticket : int;
+  time : int;  (** seconds since the epoch *)
+  op : string;
+  path : string;  (** empty where the operation names none *)
+  exn : exn;
+}
+(** An exception an operation raised, kept because the reply that reported it
+    could not.
+
+    [ticket] counts from zero across the life of the mount, so a gap between
+    consecutive entries is a record the ring has already overwritten. *)
+
+val recent_errors : unit -> recorded_error array
+(** Operations that raised anything other than [Unix.Unix_error], oldest first.
+
+    Such an operation answers the caller EIO, since a reply carries an errno and
+    nothing else, and the exception is kept here instead of being dropped. Only
+    the most recent 1024 are held. *)
+
+val error_count : unit -> int
+(** How many operations have raised, including those the ring has overwritten.
+
+    Recording one costs no allocation, so this still counts the failures a
+    process too starved to allocate could neither report nor remember. *)
+
 module Fuse_compat : sig
   type operations = {
     getattr : string -> Unix.LargeFile.stats;
