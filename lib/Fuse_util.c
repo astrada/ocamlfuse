@@ -315,14 +315,20 @@ static value make_some(value v) {
   CAMLreturn(vres);
 }
 
+/* Store_field reads the block before evaluating its third argument, so an
+   allocation there can move the block and leave the store writing to where it
+   used to be. The same holds of a rooted value passed beside an allocating
+   argument in a callback list. Bind the allocating one first. */
 static value c2ml_file_info(const struct fuse_file_info *fi) {
   CAMLparam0();
-  CAMLlocal1(vres);
+  CAMLlocal2(vres, vtmp);
 
   vres = caml_alloc(13, 0);
-  Store_field(vres, 0, c_flags_to_open_flag_list(fi->flags));
+  vtmp = c_flags_to_open_flag_list(fi->flags);
+  Store_field(vres, 0, vtmp);
   Store_field(vres, 1, Val_int(fi->flags));
-  Store_field(vres, 2, caml_copy_int64((int64_t)fi->fh));
+  vtmp = caml_copy_int64((int64_t)fi->fh);
+  Store_field(vres, 2, vtmp);
   Store_field(vres, 3, Val_bool(fi->writepage));
   Store_field(vres, 4, Val_bool(fi->direct_io));
   Store_field(vres, 5, Val_bool(fi->keep_cache));
@@ -330,8 +336,10 @@ static value c2ml_file_info(const struct fuse_file_info *fi) {
   Store_field(vres, 7, Val_bool(fi->nonseekable));
   Store_field(vres, 8, Val_bool(fi->flock_release));
   Store_field(vres, 9, Val_bool(fi->cache_readdir));
-  Store_field(vres, 10, caml_copy_int64((int64_t)fi->lock_owner));
-  Store_field(vres, 11, caml_copy_int32((int32_t)fi->poll_events));
+  vtmp = caml_copy_int64((int64_t)fi->lock_owner);
+  Store_field(vres, 10, vtmp);
+  vtmp = caml_copy_int32((int32_t)fi->poll_events);
+  Store_field(vres, 11, vtmp);
   CAMLreturn(vres);
 }
 
@@ -393,7 +401,7 @@ static value c2ml_readdir_flags(enum fuse_readdir_flags flags) {
 
 static value c2ml_timestamp(const struct timespec *tv) {
   CAMLparam0();
-  CAMLlocal2(vtimespec, vres);
+  CAMLlocal3(vtimespec, vres, vsec);
 
   if (tv->tv_nsec == UTIME_NOW)
     CAMLreturn(Val_int(0));
@@ -401,7 +409,8 @@ static value c2ml_timestamp(const struct timespec *tv) {
     CAMLreturn(Val_int(1));
 
   vtimespec = caml_alloc(2, 0);
-  Store_field(vtimespec, 0, caml_copy_int64((int64_t)tv->tv_sec));
+  vsec = caml_copy_int64((int64_t)tv->tv_sec);
+  Store_field(vtimespec, 0, vsec);
   Store_field(vtimespec, 1, Val_int(tv->tv_nsec));
   vres = caml_alloc(1, 0);
   Store_field(vres, 0, vtimespec);
@@ -594,8 +603,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(info);                                                \
     vflags = c2ml_readdir_flags(flags);                                        \
-    vres = callback4(*readdir_closure, vpath, caml_copy_int64(offset), vfi,    \
-                     vflags);                                                  \
+    voffset = caml_copy_int64(offset);                                         \
+    vres = callback4(*readdir_closure, vpath, voffset, vfi, vflags);           \
   }
 #define readdir_RES                                                            \
   vtmp = Field(vres, 0);                                                       \
@@ -730,8 +739,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info_option(fi);                                           \
-    vres =                                                                     \
-        caml_callback3(*truncate_closure, vpath, caml_copy_int64(size), vfi);  \
+    voffset = caml_copy_int64(size);                                           \
+    vres = caml_callback3(*truncate_closure, vpath, voffset, vfi);             \
   }
 #define truncate_RES
 
@@ -788,10 +797,10 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = callback4(                                                          \
-        *read_closure, vpath,                                                  \
-        caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, buf, size),    \
-        caml_copy_int64(offset), vfi);                                         \
+    vstring =                                                                  \
+        caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, buf, size);    \
+    voffset = caml_copy_int64(offset);                                         \
+    vres = callback4(*read_closure, vpath, vstring, voffset, vfi);             \
   }
 #define read_RES res = Int_val(Field(vres, 0));
 
@@ -807,10 +816,10 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = callback4(*write_closure, vpath,                                    \
-                     caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1,   \
-                                        (char *)buf, size),                    \
-                     caml_copy_int64(offset), vfi);                            \
+    vstring = caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1,          \
+                                 (char *)buf, size);                           \
+    voffset = caml_copy_int64(offset);                                         \
+    vres = callback4(*write_closure, vpath, vstring, voffset, vfi);            \
   }
 #define write_RES res = Int_val(Field(vres, 0));
 
@@ -897,8 +906,9 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   vpath = caml_copy_string(path);                                              \
   vstring = caml_alloc_string(size);                                           \
   memcpy(&Byte(String_val(vstring), 0), val, size);                            \
-  vres = callback4(*setxattr_closure, vpath, caml_copy_string(name), vstring,  \
-                   c2ml_setxattr_flags(flags));
+  vtmp = caml_copy_string(name);                                               \
+  vflags = c2ml_setxattr_flags(flags);                                         \
+  vres = callback4(*setxattr_closure, vpath, vtmp, vstring, vflags);
 #define setxattr_RES
 
 #define getxattr_ARGS                                                          \
@@ -907,7 +917,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define getxattr_RTYPE int
 #define getxattr_CB                                                            \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*getxattr_closure, vpath, caml_copy_string(name));
+  vtmp = caml_copy_string(name);                                               \
+  vres = caml_callback2(*getxattr_closure, vpath, vtmp);
 #define getxattr_RES                                                           \
   res = caml_string_length(Field(vres, 0));                                    \
   if (size > 0) {                                                              \
@@ -953,7 +964,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define removexattr_RTYPE int
 #define removexattr_CB                                                         \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*removexattr_closure, vpath, caml_copy_string(name));
+  vtmp = caml_copy_string(name);                                               \
+  vres = caml_callback2(*removexattr_closure, vpath, vtmp);
 #define removexattr_RES
 
 static void *gm281_ops_init(struct fuse_conn_info *conn,
