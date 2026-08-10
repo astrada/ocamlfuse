@@ -976,15 +976,22 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 
 /* A reply to the kernel is one errno, so an operation that raised is reduced to
    EIO and the exception has to stay behind to be read afterwards. Recording
-   allocates nothing, because the exceptions most worth keeping include the ones
-   raised because the process could not allocate. */
+   allocates nothing unless a filesystem asked for backtraces, because the
+   exceptions most worth keeping include the ones raised because the process
+   could not allocate. */
 #define ML_FUSE_ERR_RING 1024 /* power of two: the index is a mask */
 
 /* Rooted here rather than held on the OCaml side, because the recording happens
    in C. */
 static value ml_fuse_err_exns = Val_unit;  /* slots hold an exn once written */
 static value ml_fuse_err_paths = Val_unit; /* string array */
-static value ml_fuse_err_nopath = Val_unit;
+static value ml_fuse_err_backtraces = Val_unit;
+static value ml_fuse_err_empty = Val_unit;
+
+/* Building a backtrace allocates, which is the one thing this path otherwise
+   refuses to do, so it is off until a filesystem asks. See
+   [Fuse.set_backtrace_capture]. */
+static int ml_fuse_capture_backtraces = 0;
 
 /* String literals from the CALLBACK macro, so no storage and no root. */
 static const char *ml_fuse_err_ops[ML_FUSE_ERR_RING];
@@ -998,27 +1005,53 @@ static long ml_fuse_err_seq = 0;
    only one thread is ever in here. [path] is any non-block value where the
    operation names no path. */
 static long ml_fuse_record_exception(value exn, const char *op, value path) {
+  /* Rooted because capturing a backtrace calls back into OCaml, and a
+     collection there would move an unrooted [exn] or [path]. */
+  CAMLparam2(exn, path);
+  CAMLlocal2(backtrace, captured);
   long ticket = ml_fuse_err_seq++;
   int slot = (int)(ticket & (ML_FUSE_ERR_RING - 1));
 
+  /* None, which is also what an unwritten slot already holds. */
+  backtrace = Val_int(0);
+  if (ml_fuse_capture_backtraces) {
+    /* Reads the runtime's buffer, which still holds the raise the operation
+       just came back from, so nothing else may run first. */
+    const value *capture = caml_named_value("ml_fuse_capture_backtrace");
+    if (capture != NULL) {
+      captured = caml_callback_exn(*capture, Val_unit);
+      if (!Is_exception_result(captured)) {
+        backtrace = caml_alloc_small(1, 0);
+        Field(backtrace, 0) = captured;
+      }
+    }
+  }
+
   caml_modify(&Field(ml_fuse_err_exns, slot), exn);
   caml_modify(&Field(ml_fuse_err_paths, slot),
-              Is_block(path) ? path : ml_fuse_err_nopath);
+              Is_block(path) ? path : ml_fuse_err_empty);
+  caml_modify(&Field(ml_fuse_err_backtraces, slot), backtrace);
   ml_fuse_err_ops[slot] = op;
   ml_fuse_err_times[slot] = (long)time(NULL);
   /* Written last, so a reader never sees a ticket over unfilled fields. */
   ml_fuse_err_tickets[slot] = ticket;
-  return ticket;
+  CAMLreturnT(long, ticket);
+}
+
+CAMLprim value ml_fuse_set_backtrace_capture(value enabled) {
+  CAMLparam1(enabled);
+  ml_fuse_capture_backtraces = Bool_val(enabled);
+  CAMLreturn(Val_unit);
 }
 
 static void ml_fuse_init_error_ring() {
   CAMLparam0();
-  CAMLlocal1(nopath);
+  CAMLlocal1(empty);
   int i;
 
-  nopath = caml_copy_string("");
-  ml_fuse_err_nopath = nopath;
-  caml_register_global_root(&ml_fuse_err_nopath);
+  empty = caml_copy_string("");
+  ml_fuse_err_empty = empty;
+  caml_register_global_root(&ml_fuse_err_empty);
 
   /* Slots start as Val_unit, which is neither an exn nor a string; the
      ticket is what keeps one from being read before it holds either. */
@@ -1026,6 +1059,9 @@ static void ml_fuse_init_error_ring() {
   caml_register_global_root(&ml_fuse_err_exns);
   ml_fuse_err_paths = caml_alloc(ML_FUSE_ERR_RING, 0);
   caml_register_global_root(&ml_fuse_err_paths);
+  /* Val_unit is None, so nothing else has to fill these. */
+  ml_fuse_err_backtraces = caml_alloc(ML_FUSE_ERR_RING, 0);
+  caml_register_global_root(&ml_fuse_err_backtraces);
 
   for (i = 0; i < ML_FUSE_ERR_RING; i++)
     ml_fuse_err_tickets[i] = -1;
@@ -1038,13 +1074,14 @@ static value ml_fuse_error_of_slot(int slot) {
   CAMLparam0();
   CAMLlocal2(entry, op);
 
-  entry = caml_alloc(5, 0);
+  entry = caml_alloc(6, 0);
   Store_field(entry, 0, Val_long(ml_fuse_err_tickets[slot]));
   Store_field(entry, 1, Val_long(ml_fuse_err_times[slot]));
   op = caml_copy_string(ml_fuse_err_ops[slot] ? ml_fuse_err_ops[slot] : "");
   Store_field(entry, 2, op);
   Store_field(entry, 3, Field(ml_fuse_err_paths, slot));
   Store_field(entry, 4, Field(ml_fuse_err_exns, slot));
+  Store_field(entry, 5, Field(ml_fuse_err_backtraces, slot));
 
   CAMLreturn(entry);
 }

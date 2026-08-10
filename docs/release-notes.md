@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `Fuse.set_backtrace_capture` keeps the raw backtrace of the raise alongside a
+  recorded exception; off by default, since capturing one allocates.
 - An operation raising anything other than `Unix.Unix_error` now answers EIO
   instead of ERANGE, and the exception is kept in a ring readable through
   `Fuse.recent_errors` and counted by `Fuse.error_count`.

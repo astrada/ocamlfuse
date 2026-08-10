@@ -406,13 +406,32 @@ let recorded_exception_test _ctxt =
     in
     at 0
   in
+  let entry_lines =
+    List.filter
+      (fun line ->
+        mentions "read" line && mentions "E2e_raised" line
+        && mentions "__ocamlfuse_e2e_raising_read" line)
+      lines
+  in
   assert_bool
     ("no entry naming the raised exception in: " ^ after)
-    (List.exists
-       (fun line ->
-         mentions "read" line && mentions "E2e_raised" line
-         && mentions "__ocamlfuse_e2e_raising_read" line)
-       lines)
+    (entry_lines <> []);
+  (* Off by default, which is what keeps recording free of allocation. *)
+  assert_bool
+    ("a backtrace was kept with capture off: " ^ after)
+    (List.for_all (fun line -> mentions "backtrace=none" line) entry_lines);
+  (* Reading this turns capture on, so what is recorded after it must carry a
+     backtrace. *)
+  ignore (read_all (Filename.concat mountpoint "__ocamlfuse_e2e_backtraces_on"));
+  assert_unix_error Unix.EIO (fun () -> ignore (read_raw raising));
+  let last = read_all recorded in
+  let last_entry =
+    List.nth (List.rev (String.split_on_char '\n' (String.trim last))) 0
+  in
+  assert_bool
+    ("capture was on but no backtrace was kept: " ^ last_entry)
+    ((not (mentions "backtrace=none" last_entry))
+    && not (mentions "backtrace=0" last_entry))
 
 let full_tests =
   [

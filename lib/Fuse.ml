@@ -202,10 +202,26 @@ type recorded_error = {
   op : string;
   path : string;
   exn : exn;
+  backtrace : Printexc.raw_backtrace option;
 }
+
+(* Called from the stub while the runtime's buffer still holds the raise the
+   operation just came back from. *)
+let () =
+  Callback.register "ml_fuse_capture_backtrace" (fun () ->
+      Printexc.get_raw_backtrace ())
 
 external recent_errors : unit -> recorded_error array = "ml_fuse_recent_errors"
 external error_count : unit -> int = "ml_fuse_error_count"
+
+external ml_fuse_set_backtrace_capture : bool -> unit
+  = "ml_fuse_set_backtrace_capture"
+
+let set_backtrace_capture enabled =
+  (* Without this every capture is the empty backtrace. Left alone when
+     disabling, since the setting is the whole program's. *)
+  if enabled then Printexc.record_backtrace true;
+  ml_fuse_set_backtrace_capture enabled
 
 let main ?(loop_mode = Multi_threaded) argv ops =
   Fuse_bindings.ml_fuse_init ();

@@ -21,6 +21,14 @@ exception E2e_raised of string
    processes sharing anything but the mount. *)
 let recorded_errors_path = "/__ocamlfuse_e2e_recorded_errors"
 
+(* Reading this turns backtrace capture on, so the client can check that the
+   switch is what decides whether one is kept. *)
+let backtraces_on_path = "/__ocamlfuse_e2e_backtraces_on"
+
+(* On from the start, so the binding's own switch is the only thing that can
+   keep a backtrace out of a record. *)
+let () = Printexc.record_backtrace true
+
 type e2e_loop_mode = Default | Explicit of Fuse.loop_mode
 
 let loop_mode =
@@ -173,7 +181,10 @@ let rename_noreplace old_path new_path =
 let is_mt_blocking_read path = path = mt_blocking_read_path
 let is_raising_read path = path = raising_read_path
 let is_recorded_errors path = path = recorded_errors_path
-let is_synthetic path = is_raising_read path || is_recorded_errors path
+let is_backtraces_on path = path = backtraces_on_path
+
+let is_synthetic path =
+  is_raising_read path || is_recorded_errors path || is_backtraces_on path
 
 let recorded_errors_payload () =
   let buffer = Buffer.create 256 in
@@ -181,8 +192,12 @@ let recorded_errors_payload () =
   Array.iter
     (fun e ->
       Buffer.add_string buffer
-        (Printf.sprintf "%d %s %s %s\n" e.Fuse.ticket e.Fuse.op e.Fuse.path
-           (Printexc.to_string e.Fuse.exn)))
+        (Printf.sprintf "%d %s %s %s backtrace=%s\n" e.Fuse.ticket e.Fuse.op
+           e.Fuse.path
+           (Printexc.to_string e.Fuse.exn)
+           (match e.Fuse.backtrace with
+           | None -> "none"
+           | Some raw -> string_of_int (Printexc.raw_backtrace_length raw))))
     (Fuse.recent_errors ());
   Buffer.contents buffer
 
@@ -220,7 +235,8 @@ let test_operations =
       (fun path _fi ->
         log "getattr";
         if is_mt_blocking_read path then blocking_read_stats ()
-        else if is_raising_read path then synthetic_stats 1
+        else if is_raising_read path || is_backtraces_on path then
+          synthetic_stats 1
         else if is_recorded_errors path then
           synthetic_stats (String.length (recorded_errors_payload ()))
         else Unix.LargeFile.lstat (real_path path));
@@ -303,6 +319,9 @@ let test_operations =
         log "read";
         if is_mt_blocking_read path then blocking_read path buf offset
         else if is_raising_read path then raise (E2e_raised "read")
+        else if is_backtraces_on path then (
+          Fuse.set_backtrace_capture true;
+          read_payload "" buf offset)
         else if is_recorded_errors path then
           read_payload (recorded_errors_payload ()) buf offset
         else
