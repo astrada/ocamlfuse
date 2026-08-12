@@ -51,7 +51,7 @@
 #include <caml/bigarray.h>
 #include <caml/custom.h>
 #endif
-#include <caml/camlidlruntime.h>
+#include <camlidlruntime.h>
 
 int c2ml_unix_error(int c_err);
 
