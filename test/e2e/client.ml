@@ -14,7 +14,11 @@ let loop_mode =
   | Some mode -> failwith ("unknown OCAMLFUSE_E2E_LOOP_MODE: " ^ mode)
 
 let mountpoint = getenv_required "OCAMLFUSE_E2E_MOUNTPOINT"
+let backing_root = getenv_required "OCAMLFUSE_E2E_BACKING_ROOT"
 let log_path = getenv_required "OCAMLFUSE_E2E_LOG"
+let invalidate_fifo = getenv_required "OCAMLFUSE_E2E_INVALIDATE_FIFO"
+let invalidate_ack = getenv_required "OCAMLFUSE_E2E_INVALIDATE_ACK"
+let invalidate_failure = getenv_required "OCAMLFUSE_E2E_INVALIDATE_FAILURE"
 let mt_block_marker = Sys.getenv_opt "OCAMLFUSE_E2E_MT_BLOCK_MARKER"
 let mt_release_fifo = Sys.getenv_opt "OCAMLFUSE_E2E_MT_RELEASE_FIFO"
 let prefix = Printf.sprintf "ocamlfuse_e2e_%d" (Unix.getpid ())
@@ -112,12 +116,36 @@ let read_file file =
     close_in_noerr channel;
     raise exn
 
+let remove_if_exists file =
+  try Unix.unlink file with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+
 let write_file file contents =
   with_fd file [ Unix.O_CREAT; Unix.O_TRUNC; Unix.O_WRONLY ] 0o644 (fun fd ->
       write_all fd contents)
 
-let remove_if_exists file =
-  try Unix.unlink file with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
+let request_invalidation fuse_path =
+  remove_if_exists invalidate_ack;
+  remove_if_exists invalidate_failure;
+  with_fd invalidate_fifo [ Unix.O_WRONLY ] 0 (fun fd ->
+      write_all fd ("invalidate " ^ fuse_path ^ "\n"));
+  wait_until "invalidation acknowledgement" (fun () ->
+      Sys.file_exists invalidate_ack || Sys.file_exists invalidate_failure);
+  if Sys.file_exists invalidate_failure then
+    assert_failure ("invalidation failed: " ^ read_file invalidate_failure)
+
+let read_fd_from_start fd length =
+  ignore (Unix.LargeFile.lseek fd 0L Unix.SEEK_SET);
+  let bytes = Bytes.create length in
+  let rec loop offset =
+    if offset = length then ()
+    else
+      let count = Unix.read fd bytes offset (length - offset) in
+      if count = 0 then
+        assert_failure "mounted read ended before the expected payload"
+      else loop (offset + count)
+  in
+  loop 0;
+  Bytes.to_string bytes
 
 let rmdir_if_exists dir =
   try Unix.rmdir dir with Unix.Unix_error (Unix.ENOENT, _, _) -> ()
@@ -297,6 +325,29 @@ let xattr_test _ctxt =
   remove_if_exists file;
   assert_events [ "setxattr"; "getxattr"; "listxattr"; "removexattr" ]
 
+let invalidate_path_test _ctxt =
+  let name = prefix ^ "_invalidate.txt" in
+  let mounted_file = path name in
+  let backing_file = Filename.concat backing_root name in
+  let fuse_path = "/" ^ name in
+  let old_contents = "old-value\n" in
+  let new_contents = "new-value\n" in
+  remove_if_exists mounted_file;
+  write_file mounted_file old_contents;
+  with_fd mounted_file [ Unix.O_RDONLY ] 0 (fun fd ->
+      assert_equal old_contents
+        (read_fd_from_start fd (String.length old_contents));
+      write_file backing_file new_contents;
+      assert_equal
+        ~msg:"expected stale FUSE page-cache contents before invalidation"
+        old_contents
+        (read_fd_from_start fd (String.length old_contents));
+      request_invalidation fuse_path;
+      assert_equal new_contents
+        (read_fd_from_start fd (String.length new_contents)));
+  remove_if_exists mounted_file;
+  assert_event "invalidate-path"
+
 let multithreaded_control_paths () =
   match (mt_block_marker, mt_release_fifo) with
   | Some marker, Some fifo -> (marker, fifo)
@@ -378,6 +429,7 @@ let full_tests =
     "rename-noreplace" >:: rename_noreplace_test;
     "fsyncdir" >:: fsyncdir_test;
     "xattr" >:: xattr_test;
+    "invalidate-path" >:: invalidate_path_test;
   ]
 
 let smoke_tests = [ "smoke" >:: smoke_test ]

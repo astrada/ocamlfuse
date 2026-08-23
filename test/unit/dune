@@ -1,3 +1,7 @@
 (test
  (name loop_mode_compile)
  (libraries fuse3 unix))
+
+(test
+ (name invalidate_path_test)
+ (libraries fuse3 unix))

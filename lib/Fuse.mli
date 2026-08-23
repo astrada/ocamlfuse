@@ -122,6 +122,21 @@ val op_names_of_operations : operations -> Fuse_bindings.fuse_operation_names
 val default_operations : operations
 val main : ?loop_mode:loop_mode -> Fuse_bindings.str array -> operations -> unit
 
+val invalidate_path : string -> unit
+(** Invalidate the kernel's cached attributes and file contents for the inode
+    currently known at a path. Use it when those values change behind the
+    kernel's back. This does not invalidate the cached name or dentry.
+
+    With writeback caching, invalidation may block while dirty pages are written
+    back. Do not call it from an execution path, or while holding a lock, that
+    is needed to service the resulting filesystem work. Call it from another
+    thread.
+
+    A path not known to libfuse counts as success. Otherwise raises
+    [Unix.Unix_error] carrying the errno as [Unix.EUNKNOWNERR], including
+    [EINVAL] for a path containing a null byte and [ENODEV] when no mount is
+    live. *)
+
 module Fuse_compat : sig
   type operations = {
     getattr : string -> Unix.LargeFile.stats;

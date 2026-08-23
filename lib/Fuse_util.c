@@ -1056,6 +1056,54 @@ enum ml_fuse_loop_mode {
   ML_FUSE_LOOP_MULTI_THREADED = 1,
 };
 
+/* The mounted filesystem, published immediately before its request loop and
+   cleared before teardown starts. Invalidation holds the same lock while using
+   the handle, so clearing it waits for calls in progress and prevents new calls
+   from overlapping unmount or destruction.
+
+   One mount per process, as the binding's fuse_main already assumes. */
+static pthread_mutex_t ml_fuse_handle_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct fuse *ml_fuse_handle = NULL;
+
+static void ml_fuse_set_handle(struct fuse *fuse) {
+  pthread_mutex_lock(&ml_fuse_handle_lock);
+  ml_fuse_handle = fuse;
+  pthread_mutex_unlock(&ml_fuse_handle_lock);
+}
+
+/* Returns 0 on success and a negative errno otherwise. -ENOENT means the kernel
+   was not caching the path, which is the state the caller wanted. */
+CAMLprim value ml_fuse_invalidate_path(value _path) {
+  CAMLparam1(_path);
+  int result;
+  size_t len = caml_string_length(_path);
+  const char *path_data = String_val(_path);
+  char *path;
+
+  if (memchr(path_data, '\0', len) != NULL)
+    CAMLreturn(Val_int(-EINVAL));
+
+  /* Copied before the runtime is released: _path must not be touched once
+     another thread may move it. */
+  path = malloc(len + 1);
+  if (path == NULL)
+    CAMLreturn(Val_int(-ENOMEM));
+  memcpy(path, path_data, len);
+  path[len] = '\0';
+
+  caml_release_runtime_system();
+  pthread_mutex_lock(&ml_fuse_handle_lock);
+  if (ml_fuse_handle == NULL)
+    result = -ENODEV;
+  else
+    result = fuse_invalidate_path(ml_fuse_handle, path);
+  pthread_mutex_unlock(&ml_fuse_handle_lock);
+  caml_acquire_runtime_system();
+  free(path);
+
+  CAMLreturn(Val_int(result == -ENOENT ? 0 : result));
+}
+
 int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op,
                  int loop_mode) {
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -1124,12 +1172,14 @@ int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op,
     goto out_unmount;
   }
 
+  ml_fuse_set_handle(fuse);
   caml_release_runtime_system();
   if (loop_mode == ML_FUSE_LOOP_MULTI_THREADED)
     loop_result = fuse_loop_mt(fuse, opts.clone_fd);
   else
     loop_result = fuse_loop(fuse);
   caml_acquire_runtime_system();
+  ml_fuse_set_handle(NULL);
   ml_fuse_clear_thread_kind();
 
   if (loop_result != 0)

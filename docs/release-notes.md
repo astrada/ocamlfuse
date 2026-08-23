@@ -5,6 +5,8 @@
 - Values allocated for a callback argument are bound before the call, so a
   collection during argument construction can no longer hand an operation a
   stale path or buffer.
+- `Fuse.invalidate_path` invalidates cached inode attributes and file contents
+  for a path known to libfuse.
 
 ## 3.10.0
 

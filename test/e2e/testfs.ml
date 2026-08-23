@@ -8,6 +8,14 @@ let getenv_required name =
 let backing_root = getenv_required "OCAMLFUSE_E2E_BACKING_ROOT"
 let log_path = getenv_required "OCAMLFUSE_E2E_LOG"
 let ready_path = getenv_required "OCAMLFUSE_E2E_READY"
+let exited_path = getenv_required "OCAMLFUSE_E2E_EXITED"
+let invalidate_fifo = getenv_required "OCAMLFUSE_E2E_INVALIDATE_FIFO"
+let invalidate_ack = getenv_required "OCAMLFUSE_E2E_INVALIDATE_ACK"
+let invalidate_failure = getenv_required "OCAMLFUSE_E2E_INVALIDATE_FAILURE"
+
+let invalidate_stress_marker =
+  getenv_required "OCAMLFUSE_E2E_INVALIDATE_STRESS_MARKER"
+
 let mt_block_marker = Sys.getenv_opt "OCAMLFUSE_E2E_MT_BLOCK_MARKER"
 let mt_release_fifo = Sys.getenv_opt "OCAMLFUSE_E2E_MT_RELEASE_FIFO"
 let raise_unix err fn path = raise (Unix_error (err, fn, path))
@@ -69,12 +77,107 @@ let log event =
         close_out_noerr channel;
         raise exn)
 
+let write_text_file path contents =
+  let channel = open_out path in
+  try
+    output_string channel contents;
+    close_out channel
+  with exn ->
+    close_out_noerr channel;
+    raise exn
+
+let read_text_file path =
+  let channel = open_in path in
+  try
+    let length = in_channel_length channel in
+    let contents = really_input_string channel length in
+    close_in channel;
+    contents
+  with exn ->
+    close_in_noerr channel;
+    raise exn
+
 let touch path =
   let channel = open_out path in
   try close_out channel
   with exn ->
     close_out_noerr channel;
     raise exn
+
+let no_mount_errno =
+  try
+    Fuse.invalidate_path "/";
+    failwith "invalidate_path unexpectedly succeeded before mounting"
+  with
+  | Unix_error (EUNKNOWNERR errno, "invalidate_path", "/") -> errno
+  | exn ->
+      failwith
+        ("unexpected pre-mount invalidate_path result: "
+       ^ Printexc.to_string exn)
+
+let invalidation_thread = ref None
+
+let report_invalidation_failure exn =
+  if not (Sys.file_exists invalidate_failure) then
+    write_text_file invalidate_failure (Printexc.to_string exn ^ "\n")
+
+let rec stress_invalidation path =
+  try
+    Fuse.invalidate_path path;
+    stress_invalidation path
+  with
+  | Unix_error (EUNKNOWNERR errno, "invalidate_path", _)
+    when errno = no_mount_errno ->
+      log "invalidate-path-enodev"
+  | exn ->
+      report_invalidation_failure exn;
+      Thread.delay 0.001;
+      stress_invalidation path
+
+let handle_invalidation_command command =
+  match String.index_opt command ' ' with
+  | None ->
+      report_invalidation_failure
+        (Failure ("invalid invalidation command: " ^ command));
+      touch invalidate_ack;
+      false
+  | Some separator ->
+      let action = String.sub command 0 separator in
+      let path =
+        String.sub command (separator + 1)
+          (String.length command - separator - 1)
+      in
+      if action = "invalidate" then (
+        (try
+           Fuse.invalidate_path path;
+           log "invalidate-path"
+         with exn -> report_invalidation_failure exn);
+        touch invalidate_ack;
+        false)
+      else if action = "stress" then (
+        touch invalidate_stress_marker;
+        stress_invalidation path;
+        true)
+      else (
+        report_invalidation_failure
+          (Failure ("unknown invalidation command: " ^ action));
+        touch invalidate_ack;
+        false)
+
+let rec invalidation_control_loop () =
+  try
+    let channel = open_in invalidate_fifo in
+    let command = input_line channel in
+    close_in channel;
+    if not (handle_invalidation_command command) then
+      invalidation_control_loop ()
+  with exn ->
+    report_invalidation_failure exn;
+    touch invalidate_ack
+
+let start_invalidation_thread () =
+  let thread = Thread.create invalidation_control_loop () in
+  invalidation_thread := Some thread
 
 let blocking_read_mutex = Mutex.create ()
 let blocking_read_has_blocked = ref false
@@ -189,6 +292,7 @@ let test_operations =
     init =
       (fun () ->
         log "init";
+        start_invalidation_thread ();
         let channel = open_out ready_path in
         output_string channel "ready\n";
         close_out channel);
@@ -351,7 +455,17 @@ let test_operations =
         Unix.fsync (retrieve_descr fi.fi_fh));
   }
 
-let () =
+let run_main () =
   match loop_mode with
   | Default -> main Sys.argv test_operations
   | Explicit loop_mode -> main ~loop_mode Sys.argv test_operations
+
+let () =
+  run_main ();
+  (match !invalidation_thread with
+  | Some thread when Sys.file_exists invalidate_stress_marker ->
+      Thread.join thread
+  | Some _ | None -> ());
+  if Sys.file_exists invalidate_failure then
+    failwith ("invalidation worker failed: " ^ read_text_file invalidate_failure);
+  touch exited_path
