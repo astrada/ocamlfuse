@@ -1,6 +1,6 @@
 # Release Notes
 
-## Unreleased
+## 3.10.0.1
 
 - Values allocated for a callback argument are bound before the call, so a
   collection during argument construction can no longer hand an operation a
