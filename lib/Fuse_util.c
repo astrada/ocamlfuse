@@ -992,7 +992,11 @@ static value ml_fuse_err_empty = Val_unit;
 /* Building a backtrace allocates, which is the one thing this path otherwise
    refuses to do, so it is off until a filesystem asks. See
    [Fuse.set_backtrace_capture]. */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ == 201112L
 static atomic_int ml_fuse_capture_backtraces = ATOMIC_VAR_INIT(0);
+#else
+static atomic_int ml_fuse_capture_backtraces = 0;
+#endif
 
 /* The OCaml runtime lock is per-domain in OCaml 5, so it cannot serialize a
    callback on domain 0 with a public accessor running on another domain. */
