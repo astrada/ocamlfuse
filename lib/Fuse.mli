@@ -150,7 +150,7 @@ type recorded_error = {
 (** An exception an operation raised, kept because the reply that reported it
     could not.
 
-    [ticket] counts from zero across the life of the mount, so a gap between
+    [ticket] counts from zero across the life of the process, so a gap between
     consecutive entries is a record the ring has already overwritten. *)
 
 val recent_errors : unit -> recorded_error array
@@ -158,10 +158,12 @@ val recent_errors : unit -> recorded_error array
 
     Such an operation answers the caller EIO, since a reply carries an errno and
     nothing else, and the exception is kept here instead of being dropped. Only
-    the most recent 1024 are held. *)
+    the most recent 1024 are held. The returned array is a coherent snapshot and
+    is safe to request before, during, or after a mount. *)
 
 val error_count : unit -> int
-(** How many operations have raised, including those the ring has overwritten.
+(** How many operations have raised in this process, including those the ring
+    has overwritten.
 
     Without backtrace capture recording costs no allocation, so this still
     counts the failures a process too starved to allocate could neither report

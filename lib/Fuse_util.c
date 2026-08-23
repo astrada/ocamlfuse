@@ -47,6 +47,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -991,7 +992,11 @@ static value ml_fuse_err_empty = Val_unit;
 /* Building a backtrace allocates, which is the one thing this path otherwise
    refuses to do, so it is off until a filesystem asks. See
    [Fuse.set_backtrace_capture]. */
-static int ml_fuse_capture_backtraces = 0;
+static atomic_int ml_fuse_capture_backtraces = ATOMIC_VAR_INIT(0);
+
+/* The OCaml runtime lock is per-domain in OCaml 5, so it cannot serialize a
+   callback on domain 0 with a public accessor running on another domain. */
+static pthread_mutex_t ml_fuse_err_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* String literals from the CALLBACK macro, so no storage and no root. */
 static const char *ml_fuse_err_ops[ML_FUSE_ERR_RING];
@@ -1001,32 +1006,50 @@ static long ml_fuse_err_times[ML_FUSE_ERR_RING];
 /* Every exception ever recorded, not the ring's occupancy. */
 static long ml_fuse_err_seq = 0;
 
-/* Unlocked because an operation holds the OCaml runtime lock while it runs, so
-   only one thread is ever in here. [path] is any non-block value where the
+/* A thread waiting for the ring must not keep its domain from participating in
+   a stop-the-world phase. Every value that survives this call is rooted by the
+   caller. */
+static void ml_fuse_lock_error_ring() {
+  caml_release_runtime_system();
+  pthread_mutex_lock(&ml_fuse_err_lock);
+  caml_acquire_runtime_system();
+}
+
+static void ml_fuse_unlock_error_ring() {
+  pthread_mutex_unlock(&ml_fuse_err_lock);
+}
+
+/* Exported only so the unit-test stub can exercise the native ring directly;
+   it is not part of the OCaml API. [path] is any non-block value where the
    operation names no path. */
-static long ml_fuse_record_exception(value exn, const char *op, value path) {
+long ml_fuse_record_exception(value exn, const char *op, value path) {
   /* Rooted because capturing a backtrace calls back into OCaml, and a
      collection there would move an unrooted [exn] or [path]. */
   CAMLparam2(exn, path);
   CAMLlocal2(backtrace, captured);
-  long ticket = ml_fuse_err_seq++;
-  int slot = (int)(ticket & (ML_FUSE_ERR_RING - 1));
+  long ticket;
+  int slot;
 
   /* None, which is also what an unwritten slot already holds. */
   backtrace = Val_int(0);
-  if (ml_fuse_capture_backtraces) {
+  if (atomic_load_explicit(&ml_fuse_capture_backtraces, memory_order_acquire)) {
     /* Reads the runtime's buffer, which still holds the raise the operation
        just came back from, so nothing else may run first. */
     const value *capture = caml_named_value("ml_fuse_capture_backtrace");
     if (capture != NULL) {
       captured = caml_callback_exn(*capture, Val_unit);
-      if (!Is_exception_result(captured)) {
-        backtrace = caml_alloc_small(1, 0);
-        Field(backtrace, 0) = captured;
-      }
+      if (Is_exception_result(captured))
+        captured = Val_unit;
+      else
+        backtrace = captured;
     }
   }
 
+  /* From here until the unlock, allocation and callbacks are forbidden: an
+     exception must not leave the native mutex locked. */
+  ml_fuse_lock_error_ring();
+  ticket = ml_fuse_err_seq++;
+  slot = (int)(ticket & (ML_FUSE_ERR_RING - 1));
   caml_modify(&Field(ml_fuse_err_exns, slot), exn);
   caml_modify(&Field(ml_fuse_err_paths, slot),
               Is_block(path) ? path : ml_fuse_err_empty);
@@ -1035,12 +1058,14 @@ static long ml_fuse_record_exception(value exn, const char *op, value path) {
   ml_fuse_err_times[slot] = (long)time(NULL);
   /* Written last, so a reader never sees a ticket over unfilled fields. */
   ml_fuse_err_tickets[slot] = ticket;
+  ml_fuse_unlock_error_ring();
   CAMLreturnT(long, ticket);
 }
 
 CAMLprim value ml_fuse_set_backtrace_capture(value enabled) {
   CAMLparam1(enabled);
-  ml_fuse_capture_backtraces = Bool_val(enabled);
+  atomic_store_explicit(&ml_fuse_capture_backtraces, Bool_val(enabled),
+                        memory_order_release);
   CAMLreturn(Val_unit);
 }
 
@@ -1070,56 +1095,93 @@ static void ml_fuse_init_error_ring() {
 }
 
 /* Field order is that of the record on the OCaml side. */
-static value ml_fuse_error_of_slot(int slot) {
-  CAMLparam0();
+static value ml_fuse_error_of_snapshot(long ticket, long timestamp,
+                                       const char *op_name, value path,
+                                       value exn, value backtrace) {
+  CAMLparam3(path, exn, backtrace);
   CAMLlocal2(entry, op);
 
+  /* Allocate the string first so no collection can promote [entry] before all
+     of its fields have been initialized with [Store_field]. */
+  op = caml_copy_string(op_name ? op_name : "");
   entry = caml_alloc(6, 0);
-  Store_field(entry, 0, Val_long(ml_fuse_err_tickets[slot]));
-  Store_field(entry, 1, Val_long(ml_fuse_err_times[slot]));
-  op = caml_copy_string(ml_fuse_err_ops[slot] ? ml_fuse_err_ops[slot] : "");
+  Store_field(entry, 0, Val_long(ticket));
+  Store_field(entry, 1, Val_long(timestamp));
   Store_field(entry, 2, op);
-  Store_field(entry, 3, Field(ml_fuse_err_paths, slot));
-  Store_field(entry, 4, Field(ml_fuse_err_exns, slot));
-  Store_field(entry, 5, Field(ml_fuse_err_backtraces, slot));
+  Store_field(entry, 3, path);
+  Store_field(entry, 4, exn);
+  Store_field(entry, 5, backtrace);
 
   CAMLreturn(entry);
 }
 
-/* Oldest first. */
+/* Copy under the native lock, then allocate the result from the rooted snapshot
+   after unlocking. This remains coherent when another OCaml 5 domain records
+   or wraps the ring concurrently. */
 CAMLprim value ml_fuse_recent_errors(value unit) {
   CAMLparam1(unit);
-  CAMLlocal1(result);
+  CAMLlocal5(result, snapshot_paths, snapshot_exns, snapshot_backtraces, entry);
+  long tickets[ML_FUSE_ERR_RING];
+  long timestamps[ML_FUSE_ERR_RING];
+  const char *ops[ML_FUSE_ERR_RING];
   int order[ML_FUSE_ERR_RING];
   int count = 0;
   int i;
 
-  for (i = 0; i < ML_FUSE_ERR_RING; i++)
-    if (ml_fuse_err_tickets[i] >= 0)
-      order[count++] = i;
+  /* These allocations can raise, so they happen before the mutex is held. */
+  snapshot_paths = caml_alloc(ML_FUSE_ERR_RING, 0);
+  snapshot_exns = caml_alloc(ML_FUSE_ERR_RING, 0);
+  snapshot_backtraces = caml_alloc(ML_FUSE_ERR_RING, 0);
+
+  ml_fuse_lock_error_ring();
+  for (i = 0; i < ML_FUSE_ERR_RING; i++) {
+    if (ml_fuse_err_tickets[i] >= 0) {
+      tickets[count] = ml_fuse_err_tickets[i];
+      timestamps[count] = ml_fuse_err_times[i];
+      ops[count] = ml_fuse_err_ops[i];
+      caml_modify(&Field(snapshot_paths, count), Field(ml_fuse_err_paths, i));
+      caml_modify(&Field(snapshot_exns, count), Field(ml_fuse_err_exns, i));
+      caml_modify(&Field(snapshot_backtraces, count),
+                  Field(ml_fuse_err_backtraces, i));
+      order[count] = count;
+      count++;
+    }
+  }
+  ml_fuse_unlock_error_ring();
 
   /* Ring order stops being age order once it has wrapped. */
   for (i = 1; i < count; i++) {
-    int slot = order[i];
+    int snapshot_index = order[i];
     int j = i - 1;
-    while (j >= 0 &&
-           ml_fuse_err_tickets[order[j]] > ml_fuse_err_tickets[slot]) {
+    while (j >= 0 && tickets[order[j]] > tickets[snapshot_index]) {
       order[j + 1] = order[j];
       j--;
     }
-    order[j + 1] = slot;
+    order[j + 1] = snapshot_index;
   }
 
   result = caml_alloc(count, 0);
-  for (i = 0; i < count; i++)
-    Store_field(result, i, ml_fuse_error_of_slot(order[i]));
+  for (i = 0; i < count; i++) {
+    int snapshot_index = order[i];
+    entry = ml_fuse_error_of_snapshot(
+        tickets[snapshot_index], timestamps[snapshot_index],
+        ops[snapshot_index], Field(snapshot_paths, snapshot_index),
+        Field(snapshot_exns, snapshot_index),
+        Field(snapshot_backtraces, snapshot_index));
+    caml_modify(&Field(result, i), entry);
+  }
 
   CAMLreturn(result);
 }
 
 CAMLprim value ml_fuse_error_count(value unit) {
   CAMLparam1(unit);
-  CAMLreturn(Val_long(ml_fuse_err_seq));
+  long count;
+
+  ml_fuse_lock_error_ring();
+  count = ml_fuse_err_seq;
+  ml_fuse_unlock_error_ring();
+  CAMLreturn(Val_long(count));
 }
 
 static void *gm281_ops_init(struct fuse_conn_info *conn,
@@ -1129,8 +1191,11 @@ static void *gm281_ops_init(struct fuse_conn_info *conn,
   (void)conn;
   (void)cfg;
   vres = caml_callback_exn(*init_closure, Val_unit);
-  if (Is_exception_result(vres))
-    ml_fuse_record_exception(Extract_exception(vres), "init", Val_unit);
+  if (Is_exception_result(vres)) {
+    value exn = Extract_exception(vres);
+    vres = Val_unit;
+    ml_fuse_record_exception(exn, "init", Val_unit);
+  }
   CAMLreturnT(void *, NULL);
 }
 
@@ -1197,11 +1262,16 @@ void set_fuse_operations(struct fuse_operation_names const *op) {
 struct fuse_operations *get_fuse_operations() { return &ops; }
 
 void ml_fuse_init() {
+  static int initialized = 0;
+
+  if (initialized)
+    return;
   c2ml_unix_error_vect = invert_array(
       ml2c_unix_error_vect, &ml2c_unix_error_vect_dim,
       &c2ml_unix_error_vect_dim); /* TODO: this sucks together with the one at
                                      the beginning of file */
   ml_fuse_init_error_ring();
+  initialized = 1;
 }
 
 enum ml_fuse_main_status {

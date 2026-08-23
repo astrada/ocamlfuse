@@ -217,7 +217,8 @@ type recorded_error = {
    operation just came back from. *)
 let () =
   Callback.register "ml_fuse_capture_backtrace" (fun () ->
-      Printexc.get_raw_backtrace ())
+      try Some (Printexc.get_raw_backtrace ()) with _ -> None);
+  Fuse_bindings.ml_fuse_init ()
 
 external recent_errors : unit -> recorded_error array = "ml_fuse_recent_errors"
 external error_count : unit -> int = "ml_fuse_error_count"
@@ -232,7 +233,6 @@ let set_backtrace_capture enabled =
   ml_fuse_set_backtrace_capture enabled
 
 let main ?(loop_mode = Multi_threaded) argv ops =
-  Fuse_bindings.ml_fuse_init ();
   Fuse_bindings.set_fuse_operations (op_names_of_operations ops);
   let loop_mode = int_of_loop_mode loop_mode in
   match
