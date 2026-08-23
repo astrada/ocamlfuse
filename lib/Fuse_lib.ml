@@ -69,15 +69,12 @@ let supply () =
   start := !start + 1;
   "__caml_cb_" ^ string_of_int r
 
+(* Anything but [Unix_error] propagates into the stub, which records it and
+   answers EIO. *)
 let named_op f =
   if f == undefined then None
   else
-    let cb x =
-      try Ok (f x) with
-      | Unix.Unix_error (err, _, _) -> Bad err
-      | _ -> Bad Unix.ERANGE
-      (* TODO: find a better way to signal the user and log this *)
-    in
+    let cb x = try Ok (f x) with Unix.Unix_error (err, _, _) -> Bad err in
     let name = supply () in
     Callback.register name cb;
     Some name
@@ -85,11 +82,7 @@ let named_op f =
 let named_op_2 f =
   if f == undefined then None
   else
-    let cb x y =
-      try Ok (f x y) with
-      | Unix.Unix_error (err, _, _) -> Bad err
-      | _ -> Bad Unix.ERANGE
-    in
+    let cb x y = try Ok (f x y) with Unix.Unix_error (err, _, _) -> Bad err in
     let name = supply () in
     Callback.register name cb;
     Some name
@@ -98,9 +91,7 @@ let named_op_3 f =
   if f == undefined then None
   else
     let cb x y z =
-      try Ok (f x y z) with
-      | Unix.Unix_error (err, _, _) -> Bad err
-      | _ -> Bad Unix.ERANGE
+      try Ok (f x y z) with Unix.Unix_error (err, _, _) -> Bad err
     in
     let name = supply () in
     Callback.register name cb;
@@ -110,9 +101,7 @@ let named_op_4 f =
   if f == undefined then None
   else
     let cb x y z t =
-      try Ok (f x y z t) with
-      | Unix.Unix_error (err, _, _) -> Bad err
-      | _ -> Bad Unix.ERANGE
+      try Ok (f x y z t) with Unix.Unix_error (err, _, _) -> Bad err
     in
     let name = supply () in
     Callback.register name cb;

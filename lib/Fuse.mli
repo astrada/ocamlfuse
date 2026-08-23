@@ -137,6 +137,47 @@ val invalidate_path : string -> unit
     [EINVAL] for a path containing a null byte and [ENODEV] when no mount is
     live. *)
 
+type recorded_error = {
+  ticket : int;
+  time : int;  (** seconds since the epoch *)
+  op : string;
+  path : string;  (** empty where the operation names none *)
+  exn : exn;
+  backtrace : Printexc.raw_backtrace option;
+      (** [None] unless capture was on; raw, so the caller decides between
+          printing it and re-raising with it *)
+}
+(** An exception an operation raised, kept because the reply that reported it
+    could not.
+
+    [ticket] counts from zero across the life of the mount, so a gap between
+    consecutive entries is a record the ring has already overwritten. *)
+
+val recent_errors : unit -> recorded_error array
+(** Operations that raised anything other than [Unix.Unix_error], oldest first.
+
+    Such an operation answers the caller EIO, since a reply carries an errno and
+    nothing else, and the exception is kept here instead of being dropped. Only
+    the most recent 1024 are held. *)
+
+val error_count : unit -> int
+(** How many operations have raised, including those the ring has overwritten.
+
+    Without backtrace capture recording costs no allocation, so this still
+    counts the failures a process too starved to allocate could neither report
+    nor remember. *)
+
+val set_backtrace_capture : bool -> unit
+(** Whether a recorded exception carries the backtrace of the raise, off by
+    default.
+
+    Off is what makes recording allocate nothing, which matters when the
+    failures a filesystem most has to hear about are the ones raised because the
+    process could not allocate. Turning it on also turns on
+    [Printexc.record_backtrace], without which every backtrace is empty; turning
+    it off again leaves that setting alone. A capture that cannot allocate loses
+    the backtrace and keeps the entry. *)
+
 module Fuse_compat : sig
   type operations = {
     getattr : string -> Unix.LargeFile.stats;

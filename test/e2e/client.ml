@@ -418,6 +418,72 @@ let multithreaded_concurrency_test _ctxt =
     if reader_finished () then Thread.join reader;
     raise exn
 
+(* A non-[Unix_error] must reach the caller as EIO, never as the ERANGE the
+   binding used to answer, and must stay readable afterwards. *)
+let recorded_exception_test _ctxt =
+  let raising = Filename.concat mountpoint "__ocamlfuse_e2e_raising_read" in
+  let recorded = Filename.concat mountpoint "__ocamlfuse_e2e_recorded_errors" in
+  (* Read through the syscall rather than a channel: a channel reports every
+     failure as [Sys_error], which would pass for ERANGE just as well as EIO. *)
+  let with_fd file f =
+    let fd = Unix.openfile file [ Unix.O_RDONLY ] 0 in
+    Fun.protect ~finally:(fun () -> Unix.close fd) (fun () -> f fd)
+  in
+  let read_raw file =
+    with_fd file (fun fd -> Unix.read fd (Bytes.create 4096) 0 4096)
+  in
+  let read_all file =
+    with_fd file (fun fd ->
+        let buffer = Buffer.create 1024 in
+        let bytes = Bytes.create 4096 in
+        let rec loop () =
+          let n = Unix.read fd bytes 0 4096 in
+          if n > 0 then (
+            Buffer.add_subbytes buffer bytes 0 n;
+            loop ())
+        in
+        loop ();
+        Buffer.contents buffer)
+  in
+  let before = read_all recorded in
+  assert_unix_error Unix.EIO (fun () -> ignore (read_raw raising));
+  let after = read_all recorded in
+  assert_bool "the read should have been recorded" (before <> after);
+  let lines = String.split_on_char '\n' after in
+  let mentions substring line =
+    let n = String.length substring and m = String.length line in
+    let rec at i =
+      i + n <= m && (String.sub line i n = substring || at (i + 1))
+    in
+    at 0
+  in
+  let entry_lines =
+    List.filter
+      (fun line ->
+        mentions "read" line && mentions "E2e_raised" line
+        && mentions "__ocamlfuse_e2e_raising_read" line)
+      lines
+  in
+  assert_bool
+    ("no entry naming the raised exception in: " ^ after)
+    (entry_lines <> []);
+  (* Off by default, which is what keeps recording free of allocation. *)
+  assert_bool
+    ("a backtrace was kept with capture off: " ^ after)
+    (List.for_all (fun line -> mentions "backtrace=none" line) entry_lines);
+  (* Reading this turns capture on, so what is recorded after it must carry a
+     backtrace. *)
+  ignore (read_all (Filename.concat mountpoint "__ocamlfuse_e2e_backtraces_on"));
+  assert_unix_error Unix.EIO (fun () -> ignore (read_raw raising));
+  let last = read_all recorded in
+  let last_entry =
+    List.nth (List.rev (String.split_on_char '\n' (String.trim last))) 0
+  in
+  assert_bool
+    ("capture was on but no backtrace was kept: " ^ last_entry)
+    ((not (mentions "backtrace=none" last_entry))
+    && not (mentions "backtrace=0" last_entry))
+
 let full_tests =
   [
     "smoke" >:: smoke_test;
@@ -430,6 +496,7 @@ let full_tests =
     "fsyncdir" >:: fsyncdir_test;
     "xattr" >:: xattr_test;
     "invalidate-path" >:: invalidate_path_test;
+    "recorded-exception" >:: recorded_exception_test;
   ]
 
 let smoke_tests = [ "smoke" >:: smoke_test ]
