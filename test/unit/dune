@@ -1,7 +1,34 @@
 (test
  (name loop_mode_compile)
+ (modules loop_mode_compile)
  (libraries fuse3 unix))
 
 (test
  (name invalidate_path_test)
+ (modules invalidate_path_test)
  (libraries fuse3 unix))
+
+(test
+ (name recorded_errors_test)
+ (modules recorded_errors_test)
+ (libraries fuse3))
+
+(library
+ (name recorded_errors_test_support)
+ (modules recorded_errors_test_support)
+ (libraries fuse3)
+ (foreign_stubs
+  (language c)
+  (names recorded_errors_stubs)))
+
+(test
+ (name recorded_errors_ring_test)
+ (modules recorded_errors_ring_test)
+ (libraries fuse3 recorded_errors_test_support))
+
+(test
+ (name recorded_errors_domain_test)
+ (modules recorded_errors_domain_test)
+ (libraries fuse3 recorded_errors_test_support)
+ (enabled_if
+  (>= %{ocaml_version} 5.0)))

@@ -7,6 +7,13 @@
   stale path or buffer.
 - `Fuse.invalidate_path` invalidates cached inode attributes and file contents
   for a path known to libfuse.
+- `Fuse.set_backtrace_capture` keeps the raw backtrace of the raise alongside a
+  recorded exception; off by default, since capturing one allocates.
+- An operation raising anything other than `Unix.Unix_error` now answers EIO
+  instead of ERANGE, and the exception is kept in a ring readable through
+  `Fuse.recent_errors` and counted by `Fuse.error_count`. The process-lifetime
+  ring is initialized before the first mount and returns coherent snapshots
+  when accessed concurrently from OCaml 5 domains.
 
 ## 3.10.0
 

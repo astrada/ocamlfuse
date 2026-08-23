@@ -56,8 +56,29 @@ select single-threaded or multithreaded execution. In multithreaded mode,
 libfuse creates worker threads; the binding registers those foreign threads
 with the OCaml runtime on callback entry and unregisters them when the worker
 thread exits. OCaml callback execution is still serialized by the OCaml runtime
-lock, but callback interleaving can happen around blocking C or Unix calls.
-FUSE `-s` forces the effective runtime path back to single-threaded mode.
+lock within domain 0, but callback interleaving can happen around blocking C or
+Unix calls, and application-created OCaml 5 domains can run in parallel. FUSE
+`-s` forces the effective runtime path back to single-threaded mode.
+
+## Recorded Operation Errors
+
+`Fuse_lib` converts `Unix.Unix_error` to the errno result expected by libfuse.
+Any other exception reaches the hand-written C callback through an `_exn`
+runtime call, is returned to libfuse as EIO, and is retained in a 1024-entry
+process-lifetime ring. `Fuse.recent_errors` returns an oldest-first snapshot,
+and `Fuse.error_count` includes entries the ring has overwritten.
+
+The ring is initialized when the `Fuse` module loads, so its public accessors
+are valid before a mount. A native mutex protects entries and scalar metadata
+from concurrent OCaml 5 domains. Readers copy rooted values into a snapshot
+without allocating while the mutex is held, then allocate the public records
+after unlocking. The backtrace-capture switch is atomic and independent of the
+ring mutex.
+
+Backtrace capture is off by default so recording requires no OCaml allocation.
+When enabled, the named OCaml capture callback constructs the complete
+`raw_backtrace option` behind an exception boundary. If capture cannot
+allocate, the ring keeps the exception with `backtrace = None`.
 
 ## Public API Shape
 
@@ -88,7 +109,7 @@ overflow checks.
 - `lib/Fuse_util.c`: owns FUSE lifecycle integration, callback wrappers, errno
   conversion, stat/statvfs conversion, xattr conversion, FUSE 3 file-info
   conversion, rename flag conversion, readdir conversion, timestamp conversion,
-  and libfuse worker-thread registration.
+  recorded-operation errors, and libfuse worker-thread registration.
 - `lib/Fuse.ml` and `lib/Fuse.mli`: expose the native public operation record,
   `Fuse.main`, and the nested `Fuse.Fuse_compat` module.
 - `lib/Fuse_lib.ml`: registers OCaml callbacks and maps exceptions to
@@ -117,5 +138,6 @@ Adding a new libfuse callback normally requires changes in several places:
 9. Build with `dune build @install` to regenerate and compile the bindings.
 
 Keep in mind that libfuse callback results are C errno values. OCaml callbacks
-generally raise `Unix.Unix_error`, `Fuse_lib` converts callback results to
-`Fuse_result`, and `Fuse_util.c` returns negative errno values to FUSE.
+generally raise `Unix.Unix_error`, which `Fuse_lib` converts to `Fuse_result`.
+Other exceptions propagate to `Fuse_util.c`, which records them and returns
+EIO. The C layer returns all errno results to FUSE as negative values.

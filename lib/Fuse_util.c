@@ -47,12 +47,14 @@
 #include <fcntl.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <time.h>
 
 #define FUSE_USE_VERSION 30
 #include <fuse.h>
@@ -76,15 +78,16 @@
 #define RENAME_WHITEOUT (1 << 2)
 #endif
 
-CAMLprim value callback4(value closure, value arg1, value arg2, value arg3,
-                         value arg4) {
+/* The runtime stops at three arguments, so the fourth arity is spelled here. */
+static value ml_fuse_callback4_exn(value closure, value arg1, value arg2,
+                                   value arg3, value arg4) {
   CAMLparam5(closure, arg1, arg2, arg3, arg4);
   CAMLlocalN(args, 4);
   args[0] = arg1;
   args[1] = arg2;
   args[2] = arg3;
   args[3] = arg4;
-  CAMLreturn(caml_callbackN(closure, 4, args));
+  CAMLreturn(caml_callbackN_exn(closure, 4, args));
 }
 
 CAMLprim value c2ml_setxattr_flags(int flags) {
@@ -587,7 +590,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info_option(fi);                                           \
-    vres = caml_callback2(*getattr_closure, vpath, vfi);                       \
+    vres = caml_callback2_exn(*getattr_closure, vpath, vfi);                   \
   }
 #define getattr_RES ml2c_Unix_stats_struct_stat(Field(vres, 0), buf);
 
@@ -604,7 +607,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     vfi = c2ml_file_info(info);                                                \
     vflags = c2ml_readdir_flags(flags);                                        \
     voffset = caml_copy_int64(offset);                                         \
-    vres = callback4(*readdir_closure, vpath, voffset, vfi, vflags);           \
+    vres =                                                                     \
+        ml_fuse_callback4_exn(*readdir_closure, vpath, voffset, vfi, vflags);  \
   }
 #define readdir_RES                                                            \
   vtmp = Field(vres, 0);                                                       \
@@ -636,7 +640,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define mknod_RTYPE int
 #define mknod_CB                                                               \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*mknod_closure, vpath, Val_int(mode));
+  vres = caml_callback2_exn(*mknod_closure, vpath, Val_int(mode));
 #define mknod_RES
 
 #define mkdir_ARGS (const char *path, mode_t mode)
@@ -644,7 +648,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define mkdir_RTYPE int
 #define mkdir_CB                                                               \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback2(*mkdir_closure, vpath, Val_int(mode));
+  vres = caml_callback2_exn(*mkdir_closure, vpath, Val_int(mode));
 #define mkdir_RES
 
 #define unlink_ARGS (const char *path)
@@ -652,7 +656,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define unlink_RTYPE int
 #define unlink_CB                                                              \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback(*unlink_closure, vpath);
+  vres = caml_callback_exn(*unlink_closure, vpath);
 #define unlink_RES
 
 #define rmdir_ARGS (const char *path)
@@ -660,7 +664,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define rmdir_RTYPE int
 #define rmdir_CB                                                               \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback(*rmdir_closure, vpath);
+  vres = caml_callback_exn(*rmdir_closure, vpath);
 #define rmdir_RES
 
 #define readlink_ARGS (const char *path, char *buf, size_t size)
@@ -668,7 +672,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define readlink_RTYPE int
 #define readlink_CB                                                            \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback(*readlink_closure, vpath);
+  vres = caml_callback_exn(*readlink_closure, vpath);
 #define readlink_RES strncpy(buf, String_val(Field(vres, 0)), size - 1);
 
 #define symlink_ARGS (const char *path, const char *dest)
@@ -677,7 +681,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define symlink_CB                                                             \
   vpath = caml_copy_string(path);                                              \
   vtmp = caml_copy_string(dest);                                               \
-  vres = caml_callback2(*symlink_closure, vpath, vtmp);
+  vres = caml_callback2_exn(*symlink_closure, vpath, vtmp);
 #define symlink_RES
 
 #define rename_ARGS (const char *path, const char *dest, unsigned int flags)
@@ -690,7 +694,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     vpath = caml_copy_string(path);                                            \
     vtmp = caml_copy_string(dest);                                             \
     vflags = c2ml_rename_flags(flags);                                         \
-    vres = caml_callback3(*rename_closure, vpath, vtmp, vflags);               \
+    vres = caml_callback3_exn(*rename_closure, vpath, vtmp, vflags);           \
   }
 #define rename_RES
 
@@ -700,7 +704,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define link_CB                                                                \
   vpath = caml_copy_string(path);                                              \
   vtmp = caml_copy_string(dest);                                               \
-  vres = caml_callback2(*link_closure, vpath, vtmp);
+  vres = caml_callback2_exn(*link_closure, vpath, vtmp);
 #define link_RES
 
 #define chmod_ARGS (const char *path, mode_t mode, struct fuse_file_info *fi)
@@ -712,7 +716,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info_option(fi);                                           \
-    vres = caml_callback3(*chmod_closure, vpath, Val_int(mode), vfi);          \
+    vres = caml_callback3_exn(*chmod_closure, vpath, Val_int(mode), vfi);      \
   }
 #define chmod_RES
 
@@ -726,7 +730,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info_option(fi);                                           \
-    vres = callback4(*chown_closure, vpath, Val_int(uid), Val_int(gid), vfi);  \
+    vres = ml_fuse_callback4_exn(*chown_closure, vpath, Val_int(uid),          \
+                                 Val_int(gid), vfi);                           \
   }
 #define chown_RES
 
@@ -740,7 +745,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info_option(fi);                                           \
     voffset = caml_copy_int64(size);                                           \
-    vres = caml_callback3(*truncate_closure, vpath, voffset, vfi);             \
+    vres = caml_callback3_exn(*truncate_closure, vpath, voffset, vfi);         \
   }
 #define truncate_RES
 
@@ -756,7 +761,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     vtmp = c2ml_timestamp(&tv[0]);                                             \
     vtmp2 = c2ml_timestamp(&tv[1]);                                            \
     vfi = c2ml_file_info_option(fi);                                           \
-    vres = callback4(*utimens_closure, vpath, vtmp, vtmp2, vfi);               \
+    vres = ml_fuse_callback4_exn(*utimens_closure, vpath, vtmp, vtmp2, vfi);   \
   }
 #define utimens_RES
 
@@ -769,7 +774,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = caml_callback2(*open_closure, vpath, vfi);                          \
+    vres = caml_callback2_exn(*open_closure, vpath, vfi);                      \
   }
 #define open_RES ml2c_file_info_update(fi, Field(vres, 0), 0);
 
@@ -782,7 +787,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = caml_callback2(*opendir_closure, vpath, vfi);                       \
+    vres = caml_callback2_exn(*opendir_closure, vpath, vfi);                   \
   }
 #define opendir_RES ml2c_file_info_update(fi, Field(vres, 0), 1);
 
@@ -800,7 +805,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     vstring =                                                                  \
         caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1, buf, size);    \
     voffset = caml_copy_int64(offset);                                         \
-    vres = callback4(*read_closure, vpath, vstring, voffset, vfi);             \
+    vres = ml_fuse_callback4_exn(*read_closure, vpath, vstring, voffset, vfi); \
   }
 #define read_RES res = Int_val(Field(vres, 0));
 
@@ -819,7 +824,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
     vstring = caml_ba_alloc_dims(CAML_BA_UINT8 | CAML_BA_C_LAYOUT, 1,          \
                                  (char *)buf, size);                           \
     voffset = caml_copy_int64(offset);                                         \
-    vres = callback4(*write_closure, vpath, vstring, voffset, vfi);            \
+    vres =                                                                     \
+        ml_fuse_callback4_exn(*write_closure, vpath, vstring, voffset, vfi);   \
   }
 #define write_RES res = Int_val(Field(vres, 0));
 
@@ -832,7 +838,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = caml_callback2(*release_closure, vpath, vfi);                       \
+    vres = caml_callback2_exn(*release_closure, vpath, vfi);                   \
   }
 #define release_RES
 
@@ -845,7 +851,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = caml_callback2(*releasedir_closure, vpath, vfi);                    \
+    vres = caml_callback2_exn(*releasedir_closure, vpath, vfi);                \
   }
 #define releasedir_RES
 
@@ -858,7 +864,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = caml_callback2(*flush_closure, vpath, vfi);                         \
+    vres = caml_callback2_exn(*flush_closure, vpath, vfi);                     \
   }
 #define flush_RES
 
@@ -867,7 +873,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define statfs_RTYPE int
 #define statfs_CB                                                              \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback(*statfs_closure, vpath);
+  vres = caml_callback_exn(*statfs_closure, vpath);
 #define statfs_RES ml2c_Unix_struct_statvfs(Field(vres, 0), stbuf);
 
 #define fsync_ARGS (const char *path, int isdatasync, struct fuse_file_info *fi)
@@ -879,7 +885,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres = caml_callback3(*fsync_closure, vpath, Val_bool(isdatasync), vfi);   \
+    vres =                                                                     \
+        caml_callback3_exn(*fsync_closure, vpath, Val_bool(isdatasync), vfi);  \
   }
 #define fsync_RES
 
@@ -893,8 +900,8 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   } else {                                                                     \
     vpath = caml_copy_string(path);                                            \
     vfi = c2ml_file_info(fi);                                                  \
-    vres =                                                                     \
-        caml_callback3(*fsyncdir_closure, vpath, Val_bool(isdatasync), vfi);   \
+    vres = caml_callback3_exn(*fsyncdir_closure, vpath, Val_bool(isdatasync),  \
+                              vfi);                                            \
   }
 #define fsyncdir_RES
 
@@ -908,7 +915,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
   memcpy(&Byte(String_val(vstring), 0), val, size);                            \
   vtmp = caml_copy_string(name);                                               \
   vflags = c2ml_setxattr_flags(flags);                                         \
-  vres = callback4(*setxattr_closure, vpath, vtmp, vstring, vflags);
+  vres = ml_fuse_callback4_exn(*setxattr_closure, vpath, vtmp, vstring, vflags);
 #define setxattr_RES
 
 #define getxattr_ARGS                                                          \
@@ -918,7 +925,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define getxattr_CB                                                            \
   vpath = caml_copy_string(path);                                              \
   vtmp = caml_copy_string(name);                                               \
-  vres = caml_callback2(*getxattr_closure, vpath, vtmp);
+  vres = caml_callback2_exn(*getxattr_closure, vpath, vtmp);
 #define getxattr_RES                                                           \
   res = caml_string_length(Field(vres, 0));                                    \
   if (size > 0) {                                                              \
@@ -935,7 +942,7 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define listxattr_RTYPE int
 #define listxattr_CB                                                           \
   vpath = caml_copy_string(path);                                              \
-  vres = caml_callback(*listxattr_closure, vpath);
+  vres = caml_callback_exn(*listxattr_closure, vpath);
 #define listxattr_RES                                                          \
   vtmp = Field(Field(vres, 0), 0);                                             \
   int len;                                                                     \
@@ -965,8 +972,217 @@ FOR_ALL_OPS(DECLARE_OP_CLOSURE)
 #define removexattr_CB                                                         \
   vpath = caml_copy_string(path);                                              \
   vtmp = caml_copy_string(name);                                               \
-  vres = caml_callback2(*removexattr_closure, vpath, vtmp);
+  vres = caml_callback2_exn(*removexattr_closure, vpath, vtmp);
 #define removexattr_RES
+
+/* A reply to the kernel is one errno, so an operation that raised is reduced to
+   EIO and the exception has to stay behind to be read afterwards. Recording
+   allocates nothing unless a filesystem asked for backtraces, because the
+   exceptions most worth keeping include the ones raised because the process
+   could not allocate. */
+#define ML_FUSE_ERR_RING 1024 /* power of two: the index is a mask */
+
+/* Rooted here rather than held on the OCaml side, because the recording happens
+   in C. */
+static value ml_fuse_err_exns = Val_unit;  /* slots hold an exn once written */
+static value ml_fuse_err_paths = Val_unit; /* string array */
+static value ml_fuse_err_backtraces = Val_unit;
+static value ml_fuse_err_empty = Val_unit;
+
+/* Building a backtrace allocates, which is the one thing this path otherwise
+   refuses to do, so it is off until a filesystem asks. See
+   [Fuse.set_backtrace_capture]. */
+static atomic_int ml_fuse_capture_backtraces = ATOMIC_VAR_INIT(0);
+
+/* The OCaml runtime lock is per-domain in OCaml 5, so it cannot serialize a
+   callback on domain 0 with a public accessor running on another domain. */
+static pthread_mutex_t ml_fuse_err_lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* String literals from the CALLBACK macro, so no storage and no root. */
+static const char *ml_fuse_err_ops[ML_FUSE_ERR_RING];
+static long ml_fuse_err_tickets[ML_FUSE_ERR_RING];
+static long ml_fuse_err_times[ML_FUSE_ERR_RING];
+
+/* Every exception ever recorded, not the ring's occupancy. */
+static long ml_fuse_err_seq = 0;
+
+/* A thread waiting for the ring must not keep its domain from participating in
+   a stop-the-world phase. Every value that survives this call is rooted by the
+   caller. */
+static void ml_fuse_lock_error_ring() {
+  caml_release_runtime_system();
+  pthread_mutex_lock(&ml_fuse_err_lock);
+  caml_acquire_runtime_system();
+}
+
+static void ml_fuse_unlock_error_ring() {
+  pthread_mutex_unlock(&ml_fuse_err_lock);
+}
+
+/* Exported only so the unit-test stub can exercise the native ring directly;
+   it is not part of the OCaml API. [path] is any non-block value where the
+   operation names no path. */
+long ml_fuse_record_exception(value exn, const char *op, value path) {
+  /* Rooted because capturing a backtrace calls back into OCaml, and a
+     collection there would move an unrooted [exn] or [path]. */
+  CAMLparam2(exn, path);
+  CAMLlocal2(backtrace, captured);
+  long ticket;
+  int slot;
+
+  /* None, which is also what an unwritten slot already holds. */
+  backtrace = Val_int(0);
+  if (atomic_load_explicit(&ml_fuse_capture_backtraces, memory_order_acquire)) {
+    /* Reads the runtime's buffer, which still holds the raise the operation
+       just came back from, so nothing else may run first. */
+    const value *capture = caml_named_value("ml_fuse_capture_backtrace");
+    if (capture != NULL) {
+      captured = caml_callback_exn(*capture, Val_unit);
+      if (Is_exception_result(captured))
+        captured = Val_unit;
+      else
+        backtrace = captured;
+    }
+  }
+
+  /* From here until the unlock, allocation and callbacks are forbidden: an
+     exception must not leave the native mutex locked. */
+  ml_fuse_lock_error_ring();
+  ticket = ml_fuse_err_seq++;
+  slot = (int)(ticket & (ML_FUSE_ERR_RING - 1));
+  caml_modify(&Field(ml_fuse_err_exns, slot), exn);
+  caml_modify(&Field(ml_fuse_err_paths, slot),
+              Is_block(path) ? path : ml_fuse_err_empty);
+  caml_modify(&Field(ml_fuse_err_backtraces, slot), backtrace);
+  ml_fuse_err_ops[slot] = op;
+  ml_fuse_err_times[slot] = (long)time(NULL);
+  /* Written last, so a reader never sees a ticket over unfilled fields. */
+  ml_fuse_err_tickets[slot] = ticket;
+  ml_fuse_unlock_error_ring();
+  CAMLreturnT(long, ticket);
+}
+
+CAMLprim value ml_fuse_set_backtrace_capture(value enabled) {
+  CAMLparam1(enabled);
+  atomic_store_explicit(&ml_fuse_capture_backtraces, Bool_val(enabled),
+                        memory_order_release);
+  CAMLreturn(Val_unit);
+}
+
+static void ml_fuse_init_error_ring() {
+  CAMLparam0();
+  CAMLlocal1(empty);
+  int i;
+
+  empty = caml_copy_string("");
+  ml_fuse_err_empty = empty;
+  caml_register_global_root(&ml_fuse_err_empty);
+
+  /* Slots start as Val_unit, which is neither an exn nor a string; the
+     ticket is what keeps one from being read before it holds either. */
+  ml_fuse_err_exns = caml_alloc(ML_FUSE_ERR_RING, 0);
+  caml_register_global_root(&ml_fuse_err_exns);
+  ml_fuse_err_paths = caml_alloc(ML_FUSE_ERR_RING, 0);
+  caml_register_global_root(&ml_fuse_err_paths);
+  /* Val_unit is None, so nothing else has to fill these. */
+  ml_fuse_err_backtraces = caml_alloc(ML_FUSE_ERR_RING, 0);
+  caml_register_global_root(&ml_fuse_err_backtraces);
+
+  for (i = 0; i < ML_FUSE_ERR_RING; i++)
+    ml_fuse_err_tickets[i] = -1;
+
+  CAMLreturn0;
+}
+
+/* Field order is that of the record on the OCaml side. */
+static value ml_fuse_error_of_snapshot(long ticket, long timestamp,
+                                       const char *op_name, value path,
+                                       value exn, value backtrace) {
+  CAMLparam3(path, exn, backtrace);
+  CAMLlocal2(entry, op);
+
+  /* Allocate the string first so no collection can promote [entry] before all
+     of its fields have been initialized with [Store_field]. */
+  op = caml_copy_string(op_name ? op_name : "");
+  entry = caml_alloc(6, 0);
+  Store_field(entry, 0, Val_long(ticket));
+  Store_field(entry, 1, Val_long(timestamp));
+  Store_field(entry, 2, op);
+  Store_field(entry, 3, path);
+  Store_field(entry, 4, exn);
+  Store_field(entry, 5, backtrace);
+
+  CAMLreturn(entry);
+}
+
+/* Copy under the native lock, then allocate the result from the rooted snapshot
+   after unlocking. This remains coherent when another OCaml 5 domain records
+   or wraps the ring concurrently. */
+CAMLprim value ml_fuse_recent_errors(value unit) {
+  CAMLparam1(unit);
+  CAMLlocal5(result, snapshot_paths, snapshot_exns, snapshot_backtraces, entry);
+  long tickets[ML_FUSE_ERR_RING];
+  long timestamps[ML_FUSE_ERR_RING];
+  const char *ops[ML_FUSE_ERR_RING];
+  int order[ML_FUSE_ERR_RING];
+  int count = 0;
+  int i;
+
+  /* These allocations can raise, so they happen before the mutex is held. */
+  snapshot_paths = caml_alloc(ML_FUSE_ERR_RING, 0);
+  snapshot_exns = caml_alloc(ML_FUSE_ERR_RING, 0);
+  snapshot_backtraces = caml_alloc(ML_FUSE_ERR_RING, 0);
+
+  ml_fuse_lock_error_ring();
+  for (i = 0; i < ML_FUSE_ERR_RING; i++) {
+    if (ml_fuse_err_tickets[i] >= 0) {
+      tickets[count] = ml_fuse_err_tickets[i];
+      timestamps[count] = ml_fuse_err_times[i];
+      ops[count] = ml_fuse_err_ops[i];
+      caml_modify(&Field(snapshot_paths, count), Field(ml_fuse_err_paths, i));
+      caml_modify(&Field(snapshot_exns, count), Field(ml_fuse_err_exns, i));
+      caml_modify(&Field(snapshot_backtraces, count),
+                  Field(ml_fuse_err_backtraces, i));
+      order[count] = count;
+      count++;
+    }
+  }
+  ml_fuse_unlock_error_ring();
+
+  /* Ring order stops being age order once it has wrapped. */
+  for (i = 1; i < count; i++) {
+    int snapshot_index = order[i];
+    int j = i - 1;
+    while (j >= 0 && tickets[order[j]] > tickets[snapshot_index]) {
+      order[j + 1] = order[j];
+      j--;
+    }
+    order[j + 1] = snapshot_index;
+  }
+
+  result = caml_alloc(count, 0);
+  for (i = 0; i < count; i++) {
+    int snapshot_index = order[i];
+    entry = ml_fuse_error_of_snapshot(
+        tickets[snapshot_index], timestamps[snapshot_index],
+        ops[snapshot_index], Field(snapshot_paths, snapshot_index),
+        Field(snapshot_exns, snapshot_index),
+        Field(snapshot_backtraces, snapshot_index));
+    caml_modify(&Field(result, i), entry);
+  }
+
+  CAMLreturn(result);
+}
+
+CAMLprim value ml_fuse_error_count(value unit) {
+  CAMLparam1(unit);
+  long count;
+
+  ml_fuse_lock_error_ring();
+  count = ml_fuse_err_seq;
+  ml_fuse_unlock_error_ring();
+  CAMLreturn(Val_long(count));
+}
 
 static void *gm281_ops_init(struct fuse_conn_info *conn,
                             struct fuse_config *cfg) {
@@ -974,8 +1190,12 @@ static void *gm281_ops_init(struct fuse_conn_info *conn,
   CAMLlocal1(vres);
   (void)conn;
   (void)cfg;
-  vres = caml_callback(*init_closure, Val_unit);
-  (void)vres;
+  vres = caml_callback_exn(*init_closure, Val_unit);
+  if (Is_exception_result(vres)) {
+    value exn = Extract_exception(vres);
+    vres = Val_unit;
+    ml_fuse_record_exception(exn, "init", Val_unit);
+  }
   CAMLreturnT(void *, NULL);
 }
 
@@ -994,7 +1214,16 @@ static void *ops_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
     CAMLlocal5(vstring, vpath, vres, vtmp, vtmp2);                             \
     CAMLlocal5(vfi, vflags, ventry, vstat, voffset);                           \
     OPNAME##_RTYPE res = (typeof(res))-1L;                                     \
-    OPNAME##_CB if (Tag_val(vres) == 1) /* Result is not Bad */                \
+    OPNAME##_CB /* An exception result is a tagged pointer the GC must         \
+                   never scan, so [vres] is cleared before anything can        \
+                   allocate. */                                                \
+        if (Is_exception_result(vres)) {                                       \
+      value exn = Extract_exception(vres);                                     \
+      vres = Val_unit;                                                         \
+      ml_fuse_record_exception(exn, #OPNAME, vpath);                           \
+      res = (typeof(res))(long)-EIO;                                           \
+    }                                                                          \
+    else if (Tag_val(vres) == 1) /* Result is not Bad */                       \
     {                                                                          \
       res = (typeof(res))0L;                                                   \
       OPNAME##_RES /* res can be changed here */                               \
@@ -1033,10 +1262,16 @@ void set_fuse_operations(struct fuse_operation_names const *op) {
 struct fuse_operations *get_fuse_operations() { return &ops; }
 
 void ml_fuse_init() {
+  static int initialized = 0;
+
+  if (initialized)
+    return;
   c2ml_unix_error_vect = invert_array(
       ml2c_unix_error_vect, &ml2c_unix_error_vect_dim,
       &c2ml_unix_error_vect_dim); /* TODO: this sucks together with the one at
                                      the beginning of file */
+  ml_fuse_init_error_ring();
+  initialized = 1;
 }
 
 enum ml_fuse_main_status {

@@ -204,8 +204,35 @@ let invalidate_path path =
   | err ->
       raise (Unix.Unix_error (Unix.EUNKNOWNERR (-err), "invalidate_path", path))
 
+type recorded_error = {
+  ticket : int;
+  time : int;
+  op : string;
+  path : string;
+  exn : exn;
+  backtrace : Printexc.raw_backtrace option;
+}
+
+(* Called from the stub while the runtime's buffer still holds the raise the
+   operation just came back from. *)
+let () =
+  Callback.register "ml_fuse_capture_backtrace" (fun () ->
+      try Some (Printexc.get_raw_backtrace ()) with _ -> None);
+  Fuse_bindings.ml_fuse_init ()
+
+external recent_errors : unit -> recorded_error array = "ml_fuse_recent_errors"
+external error_count : unit -> int = "ml_fuse_error_count"
+
+external ml_fuse_set_backtrace_capture : bool -> unit
+  = "ml_fuse_set_backtrace_capture"
+
+let set_backtrace_capture enabled =
+  (* Without this every capture is the empty backtrace. Left alone when
+     disabling, since the setting is the whole program's. *)
+  if enabled then Printexc.record_backtrace true;
+  ml_fuse_set_backtrace_capture enabled
+
 let main ?(loop_mode = Multi_threaded) argv ops =
-  Fuse_bindings.ml_fuse_init ();
   Fuse_bindings.set_fuse_operations (op_names_of_operations ops);
   let loop_mode = int_of_loop_mode loop_mode in
   match
