@@ -81,12 +81,17 @@ mt_block_marker="$mt_control_dir/block.marker"
 mt_release_fifo="$mt_control_dir/release.fifo"
 callback_log="$tmp_root/callbacks.log"
 ready_marker="$tmp_root/ready"
+exited_marker="$tmp_root/exited"
+invalidate_fifo="$tmp_root/invalidate.fifo"
+invalidate_ack="$tmp_root/invalidate.ack"
+invalidate_failure="$tmp_root/invalidate.failure"
+invalidate_stress_marker="$tmp_root/invalidate-stress.marker"
 testfs_stdout="$tmp_root/testfs.stdout"
 testfs_stderr="$tmp_root/testfs.stderr"
 fs_pid=
 
 mkdir "$backing_root" "$mountpoint" "$mt_control_dir"
-mkfifo "$mt_release_fifo"
+mkfifo "$mt_release_fifo" "$invalidate_fifo"
 touch "$callback_log"
 
 cleanup() {
@@ -124,6 +129,11 @@ fi
 OCAMLFUSE_E2E_BACKING_ROOT="$backing_root" \
 OCAMLFUSE_E2E_LOG="$callback_log" \
 OCAMLFUSE_E2E_READY="$ready_marker" \
+OCAMLFUSE_E2E_EXITED="$exited_marker" \
+OCAMLFUSE_E2E_INVALIDATE_FIFO="$invalidate_fifo" \
+OCAMLFUSE_E2E_INVALIDATE_ACK="$invalidate_ack" \
+OCAMLFUSE_E2E_INVALIDATE_FAILURE="$invalidate_failure" \
+OCAMLFUSE_E2E_INVALIDATE_STRESS_MARKER="$invalidate_stress_marker" \
 OCAMLFUSE_E2E_LOOP_MODE="$loop_mode" \
 OCAMLFUSE_E2E_MT_BLOCK_MARKER="$mt_block_marker" \
 OCAMLFUSE_E2E_MT_RELEASE_FIFO="$mt_release_fifo" \
@@ -156,7 +166,11 @@ done
 set +e
 OCAMLFUSE_E2E_MODE="$mode" \
 OCAMLFUSE_E2E_MOUNTPOINT="$mountpoint" \
+OCAMLFUSE_E2E_BACKING_ROOT="$backing_root" \
 OCAMLFUSE_E2E_LOG="$callback_log" \
+OCAMLFUSE_E2E_INVALIDATE_FIFO="$invalidate_fifo" \
+OCAMLFUSE_E2E_INVALIDATE_ACK="$invalidate_ack" \
+OCAMLFUSE_E2E_INVALIDATE_FAILURE="$invalidate_failure" \
 OCAMLFUSE_E2E_LOOP_MODE="$loop_mode" \
 OCAMLFUSE_E2E_MT_BLOCK_MARKER="$mt_block_marker" \
 OCAMLFUSE_E2E_MT_RELEASE_FIFO="$mt_release_fifo" \
@@ -173,4 +187,73 @@ if [ "$status" -ne 0 ]; then
   echo "--- testfs stderr ---" >&2
   cat "$testfs_stderr" >&2
   exit "$status"
+fi
+
+rm -f "$invalidate_ack" "$invalidate_failure" "$invalidate_stress_marker"
+printf 'stress /\n' >"$invalidate_fifo"
+
+deadline=$((SECONDS + 10))
+while [ ! -e "$invalidate_stress_marker" ]; do
+  if ! kill -0 "$fs_pid" >/dev/null 2>&1; then
+    echo "test filesystem exited before invalidation stress started" >&2
+    cat "$testfs_stdout" >&2
+    cat "$testfs_stderr" >&2
+    exit 1
+  fi
+
+  if [ -e "$invalidate_failure" ]; then
+    echo "invalidation worker failed before teardown" >&2
+    cat "$invalidate_failure" >&2
+    exit 1
+  fi
+
+  if [ "$SECONDS" -ge "$deadline" ]; then
+    echo "timed out waiting for invalidation stress to start" >&2
+    exit 1
+  fi
+
+  sleep 0.02
+done
+
+if ! "${unmount_cmd[@]}" "$mountpoint"; then
+  echo "failed to unmount FUSE filesystem after e2e tests" >&2
+  exit 1
+fi
+
+deadline=$((SECONDS + 10))
+while [ ! -e "$exited_marker" ]; do
+  if ! kill -0 "$fs_pid" >/dev/null 2>&1; then
+    break
+  fi
+
+  if [ "$SECONDS" -ge "$deadline" ]; then
+    echo "timed out waiting for test filesystem to exit cleanly" >&2
+    cat "$testfs_stdout" >&2
+    cat "$testfs_stderr" >&2
+    exit 1
+  fi
+
+  sleep 0.02
+done
+
+set +e
+wait "$fs_pid"
+fs_status=$?
+set -e
+fs_pid=
+
+if [ "$fs_status" -ne 0 ] || [ ! -e "$exited_marker" ]; then
+  echo "test filesystem did not exit cleanly" >&2
+  if [ -e "$invalidate_failure" ]; then
+    cat "$invalidate_failure" >&2
+  fi
+  cat "$testfs_stdout" >&2
+  cat "$testfs_stderr" >&2
+  exit 1
+fi
+
+if [ -e "$invalidate_failure" ]; then
+  echo "invalidation worker reported a teardown failure" >&2
+  cat "$invalidate_failure" >&2
+  exit 1
 fi

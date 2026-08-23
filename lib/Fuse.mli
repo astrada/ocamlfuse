@@ -123,18 +123,19 @@ val default_operations : operations
 val main : ?loop_mode:loop_mode -> Fuse_bindings.str array -> operations -> unit
 
 val invalidate_path : string -> unit
-(** Drop the kernel's cached entry for a path, so the next lookup reaches the
-    filesystem rather than being answered from a stale dentry. Use it when the
-    contents change behind the kernel's back, where cache timeouts are the only
-    other control over staleness.
+(** Invalidate the kernel's cached attributes and file contents for the inode
+    currently known at a path. Use it when those values change behind the
+    kernel's back. This does not invalidate the cached name or dentry.
 
-    Must not be called from within an operation on the same path: the kernel is
-    waiting on that request and the invalidation waits on the kernel. Call it
-    from another thread.
+    With writeback caching, invalidation may block while dirty pages are written
+    back. Do not call it from an execution path, or while holding a lock, that
+    is needed to service the resulting filesystem work. Call it from another
+    thread.
 
-    A path the kernel was not caching counts as success. Otherwise raises
+    A path not known to libfuse counts as success. Otherwise raises
     [Unix.Unix_error] carrying the errno as [Unix.EUNKNOWNERR], including
-    [ENODEV] when no mount is live. *)
+    [EINVAL] for a path containing a null byte and [ENODEV] when no mount is
+    live. *)
 
 module Fuse_compat : sig
   type operations = {
