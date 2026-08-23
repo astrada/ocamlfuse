@@ -45,6 +45,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <math.h>
 #include <pthread.h>
 #include <stdint.h>
@@ -1056,6 +1057,47 @@ enum ml_fuse_loop_mode {
   ML_FUSE_LOOP_MULTI_THREADED = 1,
 };
 
+/* The mounted filesystem, published by the thread that mounts and read by
+   whichever thread invalidates. Clearing it under the same lock is what stops
+   an unmount from freeing the handle out from under a call in progress.
+
+   One mount per process, as the binding's fuse_main already assumes. */
+static pthread_mutex_t ml_fuse_handle_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct fuse *ml_fuse_handle = NULL;
+
+static void ml_fuse_set_handle(struct fuse *fuse) {
+  pthread_mutex_lock(&ml_fuse_handle_lock);
+  ml_fuse_handle = fuse;
+  pthread_mutex_unlock(&ml_fuse_handle_lock);
+}
+
+/* Returns 0 on success and a negative errno otherwise. -ENOENT means the kernel
+   was not caching the path, which is the state the caller wanted. */
+CAMLprim value ml_fuse_invalidate_path(value _path) {
+  CAMLparam1(_path);
+  int result;
+  /* Copied before the runtime is released: _path must not be touched once
+     another thread may move it. */
+  char path[PATH_MAX];
+  size_t len = caml_string_length(_path);
+
+  if (len >= sizeof(path))
+    CAMLreturn(Val_int(-ENAMETOOLONG));
+  memcpy(path, String_val(_path), len);
+  path[len] = '\0';
+
+  caml_release_runtime_system();
+  pthread_mutex_lock(&ml_fuse_handle_lock);
+  if (ml_fuse_handle == NULL)
+    result = -ENODEV;
+  else
+    result = fuse_invalidate_path(ml_fuse_handle, path);
+  pthread_mutex_unlock(&ml_fuse_handle_lock);
+  caml_acquire_runtime_system();
+
+  CAMLreturn(Val_int(result == -ENOENT ? 0 : result));
+}
+
 int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op,
                  int loop_mode) {
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
@@ -1099,6 +1141,8 @@ int ml_fuse_main(int argc, str *argv, struct fuse_operations const *op,
     status = ML_FUSE_MAIN_NEW;
     goto out_opts;
   }
+
+  ml_fuse_set_handle(fuse);
 
   if (fuse_mount(fuse, opts.mountpoint) != 0) {
     status = ML_FUSE_MAIN_MOUNT;
@@ -1144,6 +1188,7 @@ out_unmount:
     fuse_unmount(fuse);
 
 out_destroy:
+  ml_fuse_set_handle(NULL);
   if (fuse != NULL)
     fuse_destroy(fuse);
 
